@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { LoaderCircle, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 
-import { API_BASE_URL } from "../lib/api";
 import { Button } from "./ui/button";
 
 function parseMarkdown(content) {
@@ -46,6 +45,100 @@ function parseMarkdown(content) {
   return blocks;
 }
 
+function formatCurrency(value) {
+  return `${new Intl.NumberFormat("fr-FR", {
+    maximumFractionDigits: 0,
+  }).format(Number(value || 0))} DA`;
+}
+
+function getFluxTrendLabel(summary) {
+  const ratio = Number(summary?.flux_change_ratio || 0);
+
+  if (ratio >= 0.15) {
+    return "une dynamique de flux créditeurs en forte hausse";
+  }
+  if (ratio >= 0.03) {
+    return "une dynamique de flux créditeurs orientée à la hausse";
+  }
+  if (ratio <= -0.15) {
+    return "une tendance marquée des flux créditeurs en baisse";
+  }
+  if (ratio <= -0.03) {
+    return "une légère contraction des flux créditeurs";
+  }
+  return "des flux créditeurs globalement stables";
+}
+
+function getPrimaryObjection(summary, recommendation) {
+  const confidence = Number(recommendation?.confidence_pct || 0);
+  const churn = Boolean(summary?.churn_alert_flag);
+  const fluxConfie = Number(summary?.flux_confie_pct || 0);
+
+  if (churn) {
+    return {
+      objection:
+        "Le client peut craindre d'engager une nouvelle solution alors que la relation doit d'abord être sécurisée.",
+      rebuttal:
+        "Justement, la proposition vise à restaurer de la valeur immédiate avec un bénéfice simple, visible et rapide à activer.",
+    };
+  }
+
+  if (fluxConfie < 25) {
+    return {
+      objection:
+        "Le client peut considérer que son niveau de flux confié à la banque est encore trop limité pour ouvrir un nouveau produit.",
+      rebuttal:
+        "C'est précisément un levier pour capter plus d'opérations et démontrer une valeur concrète avant un élargissement plus large de la relation.",
+    };
+  }
+
+  if (confidence < 65) {
+    return {
+      objection:
+        "Le client peut demander pourquoi ce produit est prioritaire maintenant plutôt qu'une autre solution.",
+      rebuttal:
+        "Nous pouvons le rattacher à des besoins très opérationnels du moment, avec une mise en œuvre simple et un impact mesurable sur sa trésorerie ou sa fluidité de gestion.",
+    };
+  }
+
+  return {
+    objection:
+      "Le client peut penser qu'il dispose déjà d'une solution équivalente et qu'un nouveau produit n'est pas nécessaire.",
+    rebuttal:
+      "L'angle à défendre est la complémentarité: plus de souplesse, une exécution plus fluide et une meilleure adaptation au rythme réel de son activité.",
+  };
+}
+
+function buildPrototypePitch({ clientId, clientSummary, productName, recommendation, persona, ficheVisite }) {
+  const sector = clientSummary?.sector || clientSummary?.sector_detail || "son secteur";
+  const pnbNet = formatCurrency(clientSummary?.pnb_net);
+  const fluxTrend = getFluxTrendLabel(clientSummary);
+  const objection = getPrimaryObjection(clientSummary, recommendation);
+  const confidence = Number(recommendation?.confidence_pct || 0).toFixed(0);
+  const relationshipAngle =
+    Number(clientSummary?.flux_confie_pct || 0) >= 30
+      ? "consolider une relation deja active"
+      : "augmenter la part de flux et d'usage confiée à la banque";
+  const visitSignal = ficheVisite
+    ? `Le dernier signal terrain suggere deja un contexte exploitable autour de ${String(ficheVisite).slice(0, 110).trim()}.`
+    : "Le contexte de visite reste compatible avec une approche simple, concrete et orientee resultat.";
+
+  return [
+    "### 1. L'Accroche Personnalisée",
+    `Monsieur ${clientId}, en tant qu'acteur clé du secteur ${sector} avec un PNB net de ${pnbNet} et ${fluxTrend}, nous avons identifié une opportunité crédible pour positionner ${productName} au bon moment.`,
+    "",
+    "### 2. L'Argumentaire Produit",
+    `${productName} peut être présenté comme un levier immédiat pour ${relationshipAngle}. Le score de recommandation du moteur interne se situe à ${confidence}%, ce qui renforce la pertinence commerciale du produit dans votre contexte actuel. ${visitSignal}`,
+    "",
+    "### 3. Anticipation d'Objection",
+    `${objection.objection} La phrase de réponse conseillée est la suivante : "${objection.rebuttal}"`,
+    "",
+    persona ? `Persona observé : ${persona}.` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 export function PitchMarkdown({ content, muted = false }) {
   const blocks = parseMarkdown(content);
 
@@ -80,110 +173,71 @@ export function PitchMarkdown({ content, muted = false }) {
   );
 }
 
-export function LLMPitchStream({ clientId, disabled = false, onGenerated, productName }) {
-  const abortRef = useRef(null);
-
+export function LLMPitchStream({
+  clientId,
+  clientSummary,
+  disabled = false,
+  ficheVisite,
+  onGenerated,
+  persona,
+  productName,
+  recommendation,
+}) {
+  const intervalRef = useRef(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [pitchText, setPitchText] = useState("");
-  const [modelName, setModelName] = useState("mistral");
-  const [errorMessage, setErrorMessage] = useState("");
+
+  const generatedPitch = useMemo(
+    () =>
+      buildPrototypePitch({
+        clientId,
+        clientSummary,
+        ficheVisite,
+        persona,
+        productName,
+        recommendation,
+      }),
+    [clientId, clientSummary, ficheVisite, persona, productName, recommendation],
+  );
 
   useEffect(() => {
     return () => {
-      abortRef.current?.abort();
+      window.clearInterval(intervalRef.current);
     };
   }, []);
 
   function closeModal() {
-    abortRef.current?.abort();
+    window.clearInterval(intervalRef.current);
     setIsOpen(false);
     setIsStreaming(false);
   }
 
-  async function startStreaming() {
+  function startStreaming() {
     if (!clientId || !productName) {
       toast.error("Selectionnez un client et un produit avant de lancer le pitch.");
       return;
     }
 
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-
+    window.clearInterval(intervalRef.current);
     setIsOpen(true);
     setIsStreaming(true);
     setPitchText("");
-    setErrorMessage("");
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/generate-pitch`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          client_id: clientId,
-          product_name: productName,
-        }),
-        signal: controller.signal,
-      });
+    let index = 0;
+    intervalRef.current = window.setInterval(() => {
+      index += 6;
+      const nextValue = generatedPitch.slice(0, index);
+      setPitchText(nextValue);
 
-      if (!response.ok) {
-        const errorPayload = response.headers.get("content-type")?.includes("application/json")
-          ? await response.json()
-          : await response.text();
-        const message =
-          (typeof errorPayload === "object" && errorPayload?.detail) ||
-          (typeof errorPayload === "string" && errorPayload) ||
-          "Le flux Ollama n'a pas pu demarrer.";
-        throw new Error(message);
+      if (index >= generatedPitch.length) {
+        window.clearInterval(intervalRef.current);
+        intervalRef.current = null;
+        setIsStreaming(false);
+        onGenerated?.(generatedPitch);
+        toast.success("Pitch IA genere en local.");
       }
-
-      setModelName(response.headers.get("X-LLM-Model") || "mistral");
-
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error("Le navigateur n'a pas recu de flux lisible.");
-      }
-
-      const decoder = new TextDecoder("utf-8");
-      let aggregatedText = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          break;
-        }
-
-        const chunk = decoder.decode(value, { stream: true });
-        if (!chunk) {
-          continue;
-        }
-
-        aggregatedText += chunk;
-        setPitchText((current) => current + chunk);
-      }
-
-      const finalPitch = aggregatedText.trim();
-      if (!finalPitch) {
-        throw new Error("Ollama n'a retourne aucun contenu exploitable.");
-      }
-
-      onGenerated?.(finalPitch);
-      toast.success("Pitch IA genere en local.");
-    } catch (error) {
-      if (error?.name === "AbortError") {
-        return;
-      }
-
-      const message = error?.message || "Impossible de generer le pitch IA.";
-      setErrorMessage(message);
-      toast.error(message);
-    } finally {
-      setIsStreaming(false);
-      abortRef.current = null;
-    }
+    }, 18);
   }
 
   return (
@@ -204,7 +258,7 @@ export function LLMPitchStream({ clientId, disabled = false, onGenerated, produc
                   </p>
                   <h2 className="mt-2 text-2xl font-bold text-white">Argumentaire IA local</h2>
                   <p className="mt-2 text-sm leading-6 text-slate-300">
-                    Produit {productName} · Modele {modelName}
+                    Produit {productName} · Modele prototype local
                   </p>
                 </div>
 
@@ -233,10 +287,6 @@ export function LLMPitchStream({ clientId, disabled = false, onGenerated, produc
                     <div className="h-4 w-5/6 animate-pulse rounded-full bg-white/10" />
                   </div>
                 </div>
-              ) : errorMessage ? (
-                <div className="rounded-2xl border border-rose-400/30 bg-rose-500/10 p-4 text-sm text-rose-100">
-                  {errorMessage}
-                </div>
               ) : (
                 <p className="text-sm text-slate-400">Aucun contenu genere.</p>
               )}
@@ -244,7 +294,7 @@ export function LLMPitchStream({ clientId, disabled = false, onGenerated, produc
 
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 px-6 py-4 sm:px-8">
               <p className="text-xs uppercase tracking-[0.26em] text-slate-500">
-                100% local · Ollama · Mistral
+                100% local · regles metier · prototype
               </p>
 
               <div className="flex flex-wrap gap-3">

@@ -59,7 +59,6 @@ import { useUIPreferences } from "../lib/ui-preferences.jsx";
 import { exportClientPdf } from "../utils/exportPDF";
 
 const CHART_COLORS = ["#E60028", "#111827", "#FB923C", "#38BDF8", "#94A3B8"];
-const LOCAL_PITCH_ENABLED = import.meta.env.VITE_ENABLE_LOCAL_PITCH === "true";
 
 function formatCurrencyDa(value, compact = false) {
   return `${new Intl.NumberFormat("fr-FR", {
@@ -1009,50 +1008,52 @@ export function DashboardPage() {
                     </Card>
                   </section>
 
-                  {LOCAL_PITCH_ENABLED ? (
-                    <section className="space-y-4">
-                      <div>
-                        <p className="text-sm font-medium text-[#6B7280]">Section AI pitch</p>
-                        <h3 className="mt-1 text-xl font-bold text-[#111827]">Shadow Pitch local</h3>
-                      </div>
+                  <section className="space-y-4">
+                    <div>
+                      <p className="text-sm font-medium text-[#6B7280]">Section AI pitch</p>
+                      <h3 className="mt-1 text-xl font-bold text-[#111827]">Shadow Pitch local</h3>
+                    </div>
 
-                      <Card className="overflow-hidden rounded-xl border border-[#E60028]/20 bg-slate-950 shadow-sm">
-                        <CardHeader className="border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(230,0,40,0.18),transparent_38%)]">
-                          <CardTitle className="text-xl font-bold text-white">Pitch IA</CardTitle>
-                          <CardDescription className="text-sm text-slate-300">
-                            Generation hors-ligne via Ollama sur le produit selectionne.
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-5 p-6">
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <div>
-                              <p className="text-sm font-medium text-slate-400">Produit cible</p>
-                              <p className="mt-1 text-xl font-bold text-white">
-                                {selectedRecommendation?.product || "N/A"}
-                              </p>
-                            </div>
-
-                            <LLMPitchStream
-                              clientId={selectedClientId}
-                              disabled={!selectedRecommendation}
-                              onGenerated={(generatedPitch) => {
-                                setPitchContent(generatedPitch || selectedRecommendation?.argumentaire || "");
-                                setPitchSource("ollama-stream");
-                              }}
-                              productName={selectedRecommendation?.product || selectedRecommendation?.product_signal}
-                            />
-                          </div>
-
-                          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                            <PitchMarkdown content={pitchContent || "Aucun argumentaire disponible."} muted />
-                            <p className="mt-4 text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-                              Source {pitchSource}
+                    <Card className="overflow-hidden rounded-xl border border-[#E60028]/20 bg-slate-950 shadow-sm">
+                      <CardHeader className="border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(230,0,40,0.18),transparent_38%)]">
+                        <CardTitle className="text-xl font-bold text-white">Pitch IA</CardTitle>
+                        <CardDescription className="text-sm text-slate-300">
+                          Prototype local avec regles metier hardcodees pour la demonstration.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-5 p-6">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-slate-400">Produit cible</p>
+                            <p className="mt-1 text-xl font-bold text-white">
+                              {selectedRecommendation?.product || "N/A"}
                             </p>
                           </div>
-                        </CardContent>
-                      </Card>
-                    </section>
-                  ) : null}
+
+                          <LLMPitchStream
+                            clientId={selectedClientId}
+                            clientSummary={client?.summary}
+                            disabled={!selectedRecommendation}
+                            ficheVisite={insights?.fiche_visite}
+                            onGenerated={(generatedPitch) => {
+                              setPitchContent(generatedPitch || selectedRecommendation?.argumentaire || "");
+                              setPitchSource("prototype-local");
+                            }}
+                            persona={insights?.persona || client?.summary?.persona}
+                            productName={selectedRecommendation?.product || selectedRecommendation?.product_signal}
+                            recommendation={selectedRecommendation}
+                          />
+                        </div>
+
+                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                          <PitchMarkdown content={pitchContent || "Aucun argumentaire disponible."} muted />
+                          <p className="mt-4 text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
+                            Source {pitchSource}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </section>
                 </div>
 
                 <div className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)]">
