@@ -1,0 +1,155 @@
+{
+  "NB_SGCN_autorisé": {
+    "product_label": "SOGECASHNET",
+    "family": "Cash Management",
+    "auc_test": 0.9998419599353526,
+    "positive_rate": 0.3173448511025233,
+    "positives": 1396,
+    "strategy": "catboost+content+sector",
+    "credit_like": false
+  },
+  "Découvert": {
+    "product_label": "Découvert",
+    "family": "Financing/Credit",
+    "auc_test": 0.9909151677199806,
+    "positive_rate": 0.15026142305069334,
+    "positives": 661,
+    "strategy": "catboost+content+sector",
+    "credit_like": true
+  },
+  "CREDIT_SPOT": {
+    "product_label": "Crédit Spot",
+    "family": "Financing/Credit",
+    "auc_test": 0.9881817116747701,
+    "positive_rate": 0.09774948852011821,
+    "positives": 430,
+    "strategy": "catboost+content+sector",
+    "credit_like": true
+  },
+  "CAUTIONS_MARCHES": {
+    "product_label": "Cautions Marchés",
+    "family": "Financing/Credit",
+    "auc_test": 0.965454952362683,
+    "positive_rate": 0.08865651284382814,
+    "positives": 390,
+    "strategy": "catboost+content+sector",
+    "credit_like": true
+  },
+  "ENCOURS_LEASING": {
+    "product_label": "Leasing Mobilier",
+    "family": "Financing/Credit",
+    "auc_test": 0.970280178057083,
+    "positive_rate": 0.08638326892475563,
+    "positives": 380,
+    "strategy": "catboost+content+sector",
+    "credit_like": true
+  },
+  "CDI": {
+    "product_label": "Crédit Documentaire Import",
+    "family": "Trade Finance",
+    "auc_test": 0.9782350165172251,
+    "positive_rate": 0.07342577858604228,
+    "positives": 323,
+    "strategy": "catboost+content+sector",
+    "credit_like": true
+  },
+  "NB carte CIB": {
+    "product_label": "Carte CIB Business",
+    "family": "Cash Management",
+    "auc_test": 0.9915087868681851,
+    "positive_rate": 0.05819504432825642,
+    "positives": 256,
+    "strategy": "catboost+content+sector",
+    "credit_like": false
+  },
+  "ASF_ASM": {
+    "product_label": "Avance sur Factures",
+    "family": "Financing/Credit",
+    "auc_test": 0.9862427593470247,
+    "positive_rate": 0.040463741759490794,
+    "positives": 178,
+    "strategy": "catboost+content+sector",
+    "credit_like": true
+  },
+  "NB_SGATRADE_autorisé": {
+    "product_label": "SGATRADE",
+    "family": "Trade Finance",
+    "auc_test": 0.9784540576794097,
+    "positive_rate": 0.032052739258922484,
+    "positives": 141,
+    "strategy": "catboost+content+sector",
+    "credit_like": false
+  },
+  "CMT": {
+    "product_label": "Crédit Moyen Terme",
+    "family": "Financing/Credit",
+    "auc_test": 0.9397383720930232,
+    "positive_rate": 0.022959763582632416,
+    "positives": 101,
+    "strategy": "catboost+content+sector",
+    "credit_like": true
+  },
+  "ESCOMPTE": {
+    "product_label": "Escompte",
+    "family": "Financing/Credit",
+    "auc_test": 0.969894424282415,
+    "positive_rate": 0.016367356217322118,
+    "positives": 72,
+    "strategy": "catboost+content+sector",
+    "credit_like": true
+  },
+  "OCD": {
+    "product_label": "OCD",
+    "family": "Trade Finance",
+    "auc_test": null,
+    "positive_rate": 0.010002273243919073,
+    "positives": 44,
+    "strategy": "fallback",
+    "credit_like": true
+  },
+  "CRA": {
+    "product_label": "CRA",
+    "family": "Trade Finance",
+    "auc_test": null,
+    "positive_rate": 0.009547624460104568,
+    "positives": 42,
+    "strategy": "fallback",
+    "credit_like": true
+  },
+  "NB BDT": {
+    "product_label": "Bons du Trésor",
+    "family": "Treasury & Markets",
+    "auc_test": null,
+    "positive_rate": 0.0029552170947942714,
+    "positives": 13,
+    "strategy": "fallback",
+    "credit_like": false
+  },
+  "AVAL": {
+    "product_label": "Aval",
+    "family": "Trade Finance",
+    "auc_test": null,
+    "positive_rate": 0.0018185951352580132,
+    "positives": 8,
+    "strategy": "fallback",
+    "credit_like": true
+  },
+  "CREDIT-BAIL IMMOBILIER": {
+    "product_label": "Crédit-Bail Immobilier",
+    "family": "Financing/Credit",
+    "auc_test": null,
+    "positive_rate": 0.0009092975676290066,
+    "positives": 4,
+    "strategy": "fallback",
+    "credit_like": true
+  },
+  "SBLC": {
+    "product_label": "SBLC",
+    "family": "Trade Finance",
+    "auc_test": null,
+    "positive_rate": 0.0004546487838145033,
+    "positives": 2,
+    "strategy": "fallback",
+    "credit_like": true
+  }
+}

@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+Premium Banking Dashboard Design/node_modules/
+
+*.log
+.DS_Store
+Thumbs.db
+
+SGA_Fiche_Client_*.pdf
+BDD HACKATHON VF .xlsb.xlsx
+Présentation session d'accompagnement.pdf
+sga_sales_engine_bundle.pkl

@@ -1,0 +1,8 @@
+timestamp,client_id,persona,product_id,product_label,accepted,comment,sentiment,sentiment_multiplier,positive_hits,negative_hits,reward
+2026-04-24T00:02:16.092472+00:00,CLI1002,Strategic,NB_SGATRADE_autorisé,SGATRADE,True,,neutral,1.0,0,0,1.0
+2026-04-24T00:45:25.870391+00:00,CLI3474,Strategic,CDI,Crédit Documentaire Import,True,,neutral,1.0,0,0,1.0
+2026-04-24T00:45:43.172748+00:00,CLI3474,Strategic,CDI,Crédit Documentaire Import,False,une recommendation adoree et aime et accepte par le client,positive,1.25,1,0,-1.25
+2026-04-24T00:46:53.787848+00:00,CLI3474,Strategic,NB carte CIB,Carte CIB Business,True,une bonne offre adoree par le client,neutral,1.0,0,0,1.0
+2026-04-24T01:15:15.890870+00:00,CLI720,VIP,CMT,Crédit Moyen Terme,True,,neutral,1.0,0,0,1.0
+2026-04-24T01:15:35.945385+00:00,CLI720,VIP,CMT,Crédit Moyen Terme,False,,neutral,1.0,0,0,-1.0
+2026-04-24T05:11:09.405185+00:00,CLI720,VIP,ASF_ASM,Avance sur Factures,True,,neutral,1.0,0,0,1.0
