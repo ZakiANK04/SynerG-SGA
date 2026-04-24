@@ -1,15 +1,18 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight, Eye, EyeOff, LoaderCircle, LockKeyhole, Mail } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { BrandLogo } from "../components/BrandLogo";
 import { Button } from "../components/ui/button";
+import { Checkbox } from "../components/ui/checkbox";
 import { Input } from "../components/ui/input";
 import { useAuth } from "../lib/auth.jsx";
 import { FALLBACK_MANAGERS } from "../lib/managers";
 import { useUIPreferences } from "../lib/ui-preferences.jsx";
 import loginHero from "../../assets/login-hero.png";
+
+const LOGIN_MEMORY_KEY = "synerg-login-memory";
 
 function LoginTransitionOverlay({ active }) {
   return (
@@ -39,12 +42,36 @@ export function LoginPage() {
     managerName: FALLBACK_MANAGERS[0] || "",
     password: "",
   });
+  const [rememberCredentials, setRememberCredentials] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showTransition, setShowTransition] = useState(false);
   const [managerOptions, setManagerOptions] = useState(FALLBACK_MANAGERS);
 
   const redirectTo = location.state?.from?.pathname || "/dashboard";
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    try {
+      const storedMemory = window.localStorage.getItem(LOGIN_MEMORY_KEY);
+      if (!storedMemory) {
+        return;
+      }
+
+      const parsedMemory = JSON.parse(storedMemory);
+      setFormValues((current) => ({
+        ...current,
+        email: parsedMemory.email || current.email,
+        managerName: parsedMemory.managerName || current.managerName,
+      }));
+      setRememberCredentials(Boolean(parsedMemory.rememberCredentials));
+    } catch {
+      window.localStorage.removeItem(LOGIN_MEMORY_KEY);
+    }
+  }, []);
 
   function updateField(field) {
     return (event) => {
@@ -74,6 +101,21 @@ export function LoginPage() {
       await new Promise((resolve) => {
         window.setTimeout(resolve, 650);
       });
+    }
+
+    if (typeof window !== "undefined") {
+      if (rememberCredentials) {
+        window.localStorage.setItem(
+          LOGIN_MEMORY_KEY,
+          JSON.stringify({
+            email: formValues.email.trim(),
+            managerName: formValues.managerName,
+            rememberCredentials: true,
+          }),
+        );
+      } else {
+        window.localStorage.removeItem(LOGIN_MEMORY_KEY);
+      }
     }
 
     login(formValues.email.trim(), { managerName: formValues.managerName });
@@ -158,6 +200,17 @@ export function LoginPage() {
                     {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
                 </div>
+              </label>
+
+              <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <Checkbox
+                  checked={rememberCredentials}
+                  className="border-slate-300 data-[state=checked]:border-[#E60028] data-[state=checked]:bg-[#E60028] data-[state=checked]:text-white"
+                  onCheckedChange={(checked) => setRememberCredentials(Boolean(checked))}
+                />
+                <span className="text-sm font-medium text-[#111827]">
+                  Se souvenir de mes identifiants
+                </span>
               </label>
 
               <Button

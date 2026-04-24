@@ -650,93 +650,104 @@ export function DashboardPage() {
               </div>
 
               <section className="rounded-xl bg-white p-5 shadow-sm sm:p-6">
-                <div className="mb-4 flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium text-[#6B7280]">Section portefeuille</p>
-                    <h2 className="mt-1 text-xl font-bold text-[#111827]">Liste des clients</h2>
-                    <p className="mt-1 text-sm text-[#6B7280]">
-                      Cliquez sur un client pour ouvrir la fiche 360.
-                    </p>
-                  </div>
-                  <Badge className="border border-slate-200 bg-slate-50 text-slate-700" variant="outline">
-                    {clients.length} resultat(s)
-                  </Badge>
-                </div>
+                <Accordion collapsible type="single">
+                  <AccordionItem className="border-none" value="portfolio-list">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-[#6B7280]">Section portefeuille</p>
+                        <h2 className="mt-1 text-xl font-bold text-[#111827]">Liste des clients</h2>
+                        <p className="mt-1 text-sm text-[#6B7280]">
+                          Ouvrez ce panneau pour parcourir rapidement le portefeuille.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Badge className="border border-slate-200 bg-slate-50 text-slate-700" variant="outline">
+                          {clients.length} resultat(s)
+                        </Badge>
+                        <AccordionTrigger className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-[#111827] hover:no-underline">
+                          Voir la liste
+                        </AccordionTrigger>
+                      </div>
+                    </div>
 
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-sm font-medium text-[#6B7280]">ID Client</TableHead>
-                        <TableHead className="text-sm font-medium text-[#6B7280]">Qualite</TableHead>
-                        <TableHead className="text-sm font-medium text-[#6B7280]">CA</TableHead>
-                        <TableHead className="text-sm font-medium text-[#6B7280]">Flux confie</TableHead>
-                        <TableHead className="text-sm font-medium text-[#6B7280]">Churn</TableHead>
-                        <TableHead className="text-sm font-medium text-[#6B7280]">Secteur</TableHead>
-                        <TableHead className="text-right text-sm font-medium text-[#6B7280]">
-                          Action
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {clients.length ? (
-                        clients.map((clientItem) => (
-                          <TableRow
-                            key={clientItem.client_id}
-                            className="cursor-pointer hover:bg-slate-50"
-                            onClick={() => openClient(clientItem.client_id)}
-                          >
-                            <TableCell className="font-semibold text-[#111827]">
-                              {clientItem.client_id}
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                className={getQualityBadgeClass(clientItem.quality_client)}
-                                variant="outline"
-                              >
-                                {Number(clientItem.quality_client || 0).toFixed(1)}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-[#111827]">
-                              {formatCurrencyDa(clientItem.chiffre_affaire, true)}
-                            </TableCell>
-                            <TableCell className="text-[#111827]">
-                              {formatPercent(clientItem.flux_confie_pct || 0)}
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                className={getRiskBadgeClass(clientItem.churn_alert_flag)}
-                                variant="outline"
-                              >
-                                {clientItem.churn_alert_flag ? "A risque" : "Stable"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-[#6B7280]">{clientItem.sector || "N/A"}</TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                className="rounded-xl"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  openClient(clientItem.client_id);
-                                }}
-                                type="button"
-                              >
-                                Voir Fiche 360
-                                <ArrowRight className="size-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell className="py-14 text-center text-sm text-[#6B7280]" colSpan={7}>
-                            Aucun client trouve pour cette recherche.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                    <AccordionContent className="pt-4">
+                      <div className="overflow-x-auto rounded-xl border border-slate-200">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="text-sm font-medium text-[#6B7280]">ID Client</TableHead>
+                              <TableHead className="text-sm font-medium text-[#6B7280]">Qualite</TableHead>
+                              <TableHead className="text-sm font-medium text-[#6B7280]">CA</TableHead>
+                              <TableHead className="text-sm font-medium text-[#6B7280]">Flux confie</TableHead>
+                              <TableHead className="text-sm font-medium text-[#6B7280]">Churn</TableHead>
+                              <TableHead className="text-sm font-medium text-[#6B7280]">Secteur</TableHead>
+                              <TableHead className="text-right text-sm font-medium text-[#6B7280]">
+                                Action
+                              </TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {clients.length ? (
+                              clients.map((clientItem) => (
+                                <TableRow
+                                  key={clientItem.client_id}
+                                  className="cursor-pointer hover:bg-slate-50"
+                                  onClick={() => openClient(clientItem.client_id)}
+                                >
+                                  <TableCell className="font-semibold text-[#111827]">
+                                    {clientItem.client_id}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge
+                                      className={getQualityBadgeClass(clientItem.quality_client)}
+                                      variant="outline"
+                                    >
+                                      {Number(clientItem.quality_client || 0).toFixed(1)}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-[#111827]">
+                                    {formatCurrencyDa(clientItem.chiffre_affaire, true)}
+                                  </TableCell>
+                                  <TableCell className="text-[#111827]">
+                                    {formatPercent(clientItem.flux_confie_pct || 0)}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge
+                                      className={getRiskBadgeClass(clientItem.churn_alert_flag)}
+                                      variant="outline"
+                                    >
+                                      {clientItem.churn_alert_flag ? "A risque" : "Stable"}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-[#6B7280]">{clientItem.sector || "N/A"}</TableCell>
+                                  <TableCell className="text-right">
+                                    <Button
+                                      className="rounded-xl"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        openClient(clientItem.client_id);
+                                      }}
+                                      type="button"
+                                    >
+                                      Voir Fiche 360
+                                      <ArrowRight className="size-4" />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            ) : (
+                              <TableRow>
+                                <TableCell className="py-14 text-center text-sm text-[#6B7280]" colSpan={7}>
+                                  Aucun client trouve pour cette recherche.
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
               </section>
             </section>
           </>
@@ -806,37 +817,101 @@ export function DashboardPage() {
 
                 <section className="space-y-4">
                   <div>
-                    <p className="text-sm font-medium text-[#6B7280]">Section KPI client</p>
-                    <h3 className="mt-1 text-xl font-bold text-[#111827]">KPIs financiers</h3>
+                    <p className="text-sm font-medium text-[#6B7280]">Section informations client</p>
+                    <h3 className="mt-1 text-xl font-bold text-[#111827]">Profil entreprise</h3>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-6 xl:grid-cols-5">
-                    <KpiCard
-                      label="Chiffre d'affaire"
-                      supporting="Volume global du client"
-                      value={formatCurrencyDa(client.summary.chiffre_affaire, true)}
-                    />
-                    <KpiCard
-                      label="PNB net"
-                      supporting="Contribution nette 15 mois"
-                      value={formatCurrencyDa(client.summary.pnb_net, true)}
-                    />
-                    <KpiCard
-                      label="Flux crediteurs"
-                      supporting={`Variation ${formatPercent(Number(client.summary.flux_change_ratio || 0) * 100)}`}
-                      value={formatCurrencyDa(client.summary.flux_current_3m, true)}
-                    />
-                    <KpiCard
-                      label="Flux confie"
-                      supporting="Flux crediteur / chiffre d'affaire"
-                      value={formatPercent(client.summary.flux_confie_pct || 0)}
-                    />
-                    <KpiCard
-                      label="Etat incidents"
-                      supporting={client.summary.incident_status || "N/A"}
-                      value={client.summary.churn_alert_flag ? "Alerte" : "Sain"}
-                    />
-                  </div>
+                  <Card className="rounded-xl border-slate-200 bg-white shadow-sm">
+                    <CardHeader>
+                      <CardTitle className="text-xl font-bold text-[#111827]">
+                        Informations specifiques
+                      </CardTitle>
+                      <CardDescription className="text-sm text-[#6B7280]">
+                        Vue relationnelle, administrative et contextuelle du client.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                      <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
+                        <UserRound className="mt-0.5 size-5 text-[#E60028]" />
+                        <div>
+                          <p className="text-sm font-medium text-[#6B7280]">Gestionnaire</p>
+                          <p className="mt-1 text-sm font-semibold text-[#111827]">
+                            {client.summary.manager || "N/A"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
+                        <Sparkles className="mt-0.5 size-5 text-[#E60028]" />
+                        <div>
+                          <p className="text-sm font-medium text-[#6B7280]">Persona</p>
+                          <p className="mt-1 text-sm font-semibold text-[#111827]">
+                            {insights.persona || client.summary.persona || "N/A"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
+                        <Building2 className="mt-0.5 size-5 text-[#E60028]" />
+                        <div>
+                          <p className="text-sm font-medium text-[#6B7280]">Secteur detaille</p>
+                          <p className="mt-1 text-sm font-semibold text-[#111827]">
+                            {client.summary.sector_detail || client.summary.sector || "N/A"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
+                        <MapPinned className="mt-0.5 size-5 text-[#E60028]" />
+                        <div>
+                          <p className="text-sm font-medium text-[#6B7280]">Wilaya</p>
+                          <p className="mt-1 text-sm font-semibold text-[#111827]">
+                            {client.summary.wilaya || "N/A"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
+                        <CalendarDays className="mt-0.5 size-5 text-[#E60028]" />
+                        <div>
+                          <p className="text-sm font-medium text-[#6B7280]">Date de creation</p>
+                          <p className="mt-1 text-sm font-semibold text-[#111827]">
+                            {formatDate(client.summary.creation_date)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
+                        <TrendingUp className="mt-0.5 size-5 text-[#E60028]" />
+                        <div>
+                          <p className="text-sm font-medium text-[#6B7280]">Capital simule</p>
+                          <p className="mt-1 text-sm font-semibold text-[#111827]">
+                            {formatCurrencyDa(client.summary.capital_simulated)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
+                        <Users className="mt-0.5 size-5 text-[#E60028]" />
+                        <div>
+                          <p className="text-sm font-medium text-[#6B7280]">Actionnaires</p>
+                          <p className="mt-1 text-sm font-semibold text-[#111827]">
+                            {client.summary.shareholders_count || 0}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
+                        <ShieldAlert className="mt-0.5 size-5 text-[#E60028]" />
+                        <div>
+                          <p className="text-sm font-medium text-[#6B7280]">Etat de relation</p>
+                          <p className="mt-1 text-sm font-semibold text-[#111827]">
+                            {client.summary.churn_alert_flag ? "Client a surveiller" : "Relation stable"}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </section>
 
                 <section className="space-y-4">
@@ -921,94 +996,43 @@ export function DashboardPage() {
                   </div>
                 </section>
 
+                <section className="space-y-4">
+                  <div>
+                    <p className="text-sm font-medium text-[#6B7280]">Section KPI client</p>
+                    <h3 className="mt-1 text-xl font-bold text-[#111827]">KPIs financiers</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-5">
+                    <KpiCard
+                      label="Chiffre d'affaire"
+                      supporting="Volume global du client"
+                      value={formatCurrencyDa(client.summary.chiffre_affaire, true)}
+                    />
+                    <KpiCard
+                      label="PNB net"
+                      supporting="Contribution nette 15 mois"
+                      value={formatCurrencyDa(client.summary.pnb_net, true)}
+                    />
+                    <KpiCard
+                      label="Flux crediteurs"
+                      supporting={`Variation ${formatPercent(Number(client.summary.flux_change_ratio || 0) * 100)}`}
+                      value={formatCurrencyDa(client.summary.flux_current_3m, true)}
+                    />
+                    <KpiCard
+                      label="Flux confie"
+                      supporting="Flux crediteur / chiffre d'affaire"
+                      value={formatPercent(client.summary.flux_confie_pct || 0)}
+                    />
+                    <KpiCard
+                      label="Etat incidents"
+                      supporting={client.summary.incident_status || "N/A"}
+                      value={client.summary.churn_alert_flag ? "Alerte" : "Sain"}
+                    />
+                  </div>
+                </section>
+
                 <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-                  <section className="space-y-4">
-                    <div>
-                      <p className="text-sm font-medium text-[#6B7280]">Section informations client</p>
-                      <h3 className="mt-1 text-xl font-bold text-[#111827]">Informations specifiques</h3>
-                    </div>
-
-                    <Card className="rounded-xl border-slate-200 bg-white shadow-sm">
-                      <CardHeader>
-                        <CardTitle className="text-xl font-bold text-[#111827]">
-                          Profil entreprise
-                        </CardTitle>
-                        <CardDescription className="text-sm text-[#6B7280]">
-                          Vue relationnelle, administrative et contextuelle du client.
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="grid gap-4 sm:grid-cols-2">
-                        <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
-                          <UserRound className="mt-0.5 size-5 text-[#E60028]" />
-                          <div>
-                            <p className="text-sm font-medium text-[#6B7280]">Gestionnaire</p>
-                            <p className="mt-1 text-sm font-semibold text-[#111827]">
-                              {client.summary.manager || "N/A"}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
-                          <Sparkles className="mt-0.5 size-5 text-[#E60028]" />
-                          <div>
-                            <p className="text-sm font-medium text-[#6B7280]">Persona</p>
-                            <p className="mt-1 text-sm font-semibold text-[#111827]">
-                              {insights.persona || client.summary.persona || "N/A"}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
-                          <Building2 className="mt-0.5 size-5 text-[#E60028]" />
-                          <div>
-                            <p className="text-sm font-medium text-[#6B7280]">Secteur detaille</p>
-                            <p className="mt-1 text-sm font-semibold text-[#111827]">
-                              {client.summary.sector_detail || client.summary.sector || "N/A"}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
-                          <MapPinned className="mt-0.5 size-5 text-[#E60028]" />
-                          <div>
-                            <p className="text-sm font-medium text-[#6B7280]">Wilaya</p>
-                            <p className="mt-1 text-sm font-semibold text-[#111827]">
-                              {client.summary.wilaya || "N/A"}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
-                          <CalendarDays className="mt-0.5 size-5 text-[#E60028]" />
-                          <div>
-                            <p className="text-sm font-medium text-[#6B7280]">Date de creation</p>
-                            <p className="mt-1 text-sm font-semibold text-[#111827]">
-                              {formatDate(client.summary.creation_date)}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
-                          <TrendingUp className="mt-0.5 size-5 text-[#E60028]" />
-                          <div>
-                            <p className="text-sm font-medium text-[#6B7280]">Capital simule</p>
-                            <p className="mt-1 text-sm font-semibold text-[#111827]">
-                              {formatCurrencyDa(client.summary.capital_simulated)}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="rounded-xl bg-slate-50 p-4 sm:col-span-2">
-                          <p className="text-sm font-medium text-[#6B7280]">Actionnaires</p>
-                          <p className="mt-1 text-sm font-semibold text-[#111827]">
-                            {client.summary.shareholders_count || 0}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </section>
-
-                  <section className="space-y-4">
+                  <section className="space-y-4 xl:col-span-2">
                     <div>
                       <p className="text-sm font-medium text-[#6B7280]">Section AI pitch</p>
                       <h3 className="mt-1 text-xl font-bold text-[#111827]">Shadow Pitch local</h3>
@@ -1258,59 +1282,6 @@ export function DashboardPage() {
                     </Card>
                   </section>
 
-                  <section className="space-y-4">
-                    <div>
-                      <p className="text-sm font-medium text-[#6B7280]">Section complementaire</p>
-                      <h3 className="mt-1 text-xl font-bold text-[#111827]">Profil complementaire</h3>
-                    </div>
-
-                    <Card className="rounded-xl border-slate-200 bg-white shadow-sm">
-                      <CardHeader>
-                        <CardTitle className="text-xl font-bold text-[#111827]">Informations client</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
-                          <UserRound className="mt-0.5 size-5 text-[#E60028]" />
-                          <div>
-                            <p className="text-sm font-medium text-[#6B7280]">Gestionnaire</p>
-                            <p className="mt-1 text-sm font-semibold text-[#111827]">
-                              {client.summary.manager || "N/A"}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
-                          <Building2 className="mt-0.5 size-5 text-[#E60028]" />
-                          <div>
-                            <p className="text-sm font-medium text-[#6B7280]">Secteur detaille</p>
-                            <p className="mt-1 text-sm font-semibold text-[#111827]">
-                              {client.summary.sector_detail || "N/A"}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
-                          <TrendingUp className="mt-0.5 size-5 text-[#E60028]" />
-                          <div>
-                            <p className="text-sm font-medium text-[#6B7280]">Capital simule</p>
-                            <p className="mt-1 text-sm font-semibold text-[#111827]">
-                              {formatCurrencyDa(client.summary.capital_simulated)}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
-                          <Sparkles className="mt-0.5 size-5 text-[#E60028]" />
-                          <div>
-                            <p className="text-sm font-medium text-[#6B7280]">Persona</p>
-                            <p className="mt-1 text-sm font-semibold text-[#111827]">
-                              {insights.persona || client.summary.persona || "N/A"}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </section>
                 </div>
               </>
             )}
