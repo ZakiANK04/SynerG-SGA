@@ -5,7 +5,7 @@ import { Toaster } from "sonner";
 import introVideo from "../assets/intro-video.mp4";
 import { BrandLogo } from "./components/BrandLogo";
 import { AppLayout } from "./components/Layout";
-import { AuthProvider, ProtectedRoute, PublicOnlyRoute, useAuth } from "./lib/auth.jsx";
+import { AuthProvider, ProtectedRoute, PublicOnlyRoute } from "./lib/auth.jsx";
 import { UIPreferencesProvider, useUIPreferences } from "./lib/ui-preferences.jsx";
 import { DashboardPage } from "./pages/Dashboard";
 import { FeedbackConfirmationPage } from "./pages/FeedbackConfirmation";
@@ -102,9 +102,6 @@ function IntroOverlay({ onComplete }) {
 function AnimatedRoutes({ disableTransitions = false }) {
   const location = useLocation();
   const { animationsEnabled } = useUIPreferences();
-  const { isAuthenticated } = useAuth();
-
-  const [displayLocation, setDisplayLocation] = useState(location);
   const [transitionActive, setTransitionActive] = useState(false);
   const previousLocationRef = useRef(`${location.pathname}${location.search}`);
 
@@ -113,14 +110,12 @@ function AnimatedRoutes({ disableTransitions = false }) {
 
     if (disableTransitions) {
       previousLocationRef.current = nextLocationKey;
-      setDisplayLocation(location);
       setTransitionActive(false);
       return;
     }
 
     if (!animationsEnabled) {
       previousLocationRef.current = nextLocationKey;
-      setDisplayLocation(location);
       setTransitionActive(false);
       return;
     }
@@ -132,29 +127,18 @@ function AnimatedRoutes({ disableTransitions = false }) {
     previousLocationRef.current = nextLocationKey;
     setTransitionActive(true);
 
-    const swapTimer = window.setTimeout(() => {
-      setDisplayLocation(location);
-    }, 220);
-
     const closeTimer = window.setTimeout(() => {
       setTransitionActive(false);
-    }, 620);
+    }, 360);
 
     return () => {
-      window.clearTimeout(swapTimer);
       window.clearTimeout(closeTimer);
     };
   }, [animationsEnabled, disableTransitions, location]);
 
-  useEffect(() => {
-    previousLocationRef.current = `${location.pathname}${location.search}`;
-    setDisplayLocation(location);
-    setTransitionActive(false);
-  }, [isAuthenticated, location]);
-
   return (
     <>
-      <Routes location={displayLocation}>
+      <Routes>
         <Route element={<PublicOnlyRoute />}>
           <Route element={<LoginPage />} path="/login" />
         </Route>

@@ -8,6 +8,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { fetchManagers } from "../lib/api";
 import { useAuth } from "../lib/auth.jsx";
+import { FALLBACK_MANAGERS } from "../lib/managers";
 import { useUIPreferences } from "../lib/ui-preferences.jsx";
 import loginHero from "../../assets/login-hero.png";
 
@@ -42,8 +43,8 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showTransition, setShowTransition] = useState(false);
-  const [managerOptions, setManagerOptions] = useState([]);
-  const [managersLoading, setManagersLoading] = useState(true);
+  const [managerOptions, setManagerOptions] = useState(FALLBACK_MANAGERS);
+  const [managersLoading, setManagersLoading] = useState(false);
 
   const redirectTo = location.state?.from?.pathname || "/dashboard";
 
@@ -68,7 +69,7 @@ export function LoginPage() {
           return;
         }
 
-        const managers = response?.managers || [];
+        const managers = response?.managers?.length ? response.managers : FALLBACK_MANAGERS;
         setManagerOptions(managers);
         setFormValues((current) => ({
           ...current,
@@ -76,7 +77,11 @@ export function LoginPage() {
         }));
       } catch (error) {
         if (active) {
-          toast.error(error.message || "Impossible de charger la liste des gestionnaires.");
+          setManagerOptions(FALLBACK_MANAGERS);
+          setFormValues((current) => ({
+            ...current,
+            managerName: current.managerName || FALLBACK_MANAGERS[0] || "",
+          }));
         }
       } finally {
         if (active) {
