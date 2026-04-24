@@ -775,6 +775,72 @@ def build_pitch_fallback(
     )
 
 
+def build_shadow_pitch_fallback(
+    client_id: str,
+    product_name: str,
+    context: dict[str, Any],
+    client_summary: dict[str, Any],
+    insights_payload: dict[str, Any],
+    recommendation: dict[str, Any] | None = None,
+) -> str:
+    confidence_pct = round(safe_float((recommendation or {}).get("confidence_pct")), 1)
+    flux_trend = clean_prompt_value(context.get("tendance_flux"), "Flux stables")
+    sector = clean_prompt_value(context.get("secteur"), "Secteur non renseigne")
+    persona = clean_prompt_value(context.get("persona"), "Standard")
+    pnb_net = round(safe_float(context.get("pnb_net")))
+    churn_alert = int(safe_float(context.get("churn_alert")))
+    fiche_visite = truncate_text(insights_payload.get("fiche_visite"), max_chars=180)
+    flux_confie_pct = round(safe_float(client_summary.get("flux_confie_pct")), 1)
+
+    if churn_alert:
+        objection = (
+            "Le client peut preferer temporiser toute nouvelle proposition tant que la relation n'est pas completement stabilisee."
+        )
+        rebuttal = (
+            "Justement, la proposition peut etre presentee comme un levier simple pour recreer rapidement de la valeur et renforcer l'ancrage de la relation."
+        )
+    elif flux_confie_pct < 25:
+        objection = (
+            "Le client peut estimer que son niveau de flux confie a la banque reste encore trop limite pour prioriser ce produit."
+        )
+        rebuttal = (
+            "Ce produit est justement un bon point d'entree pour capter davantage de flux, demontrer un benefice mesurable et installer une relation plus dense."
+        )
+    else:
+        objection = (
+            "Le client peut penser qu'il dispose deja d'une solution proche et ne pas voir l'urgence d'ajouter un nouveau produit."
+        )
+        rebuttal = (
+            "La reponse a porter est celle de la complementarite, de la fluidite d'execution et de l'adaptation plus fine au rythme reel de son activite."
+        )
+
+    return "\n".join(
+        [
+            "### 1. L'Accroche Personnalisee",
+            (
+                f"Monsieur {client_id}, en tant qu'acteur cle dans le secteur {sector}, avec un PNB net de {pnb_net} DA "
+                f"et {flux_trend.lower()}, nous avons identifie une opportunite credible pour positionner {product_name} dans un timing pertinent."
+            ),
+            "",
+            "### 2. L'Argumentaire Produit",
+            (
+                f"{product_name} peut etre presente comme un levier immediat pour renforcer la qualite de service et la valeur relationnelle. "
+                f"Le persona {persona} et le niveau de confiance du moteur a {confidence_pct}% soutiennent cette priorite. "
+                f"{fiche_visite or 'Le contexte de visite reste compatible avec une approche simple, concrete et orientee resultat.'}"
+            ),
+            "",
+            "### 3. Anticipation d'Objection",
+            f"{objection} La phrase conseillee pour y repondre est : \"{rebuttal}\"",
+        ]
+    )
+
+
+def stream_text_chunks(text: str, chunk_size: int = 32):
+    normalized_text = clean_string(text)
+    for index in range(0, len(normalized_text), chunk_size):
+        yield normalized_text[index : index + chunk_size]
+
+
 def extract_ollama_error(response: httpx.Response, base_url: str) -> str:
     try:
         payload = response.json()
@@ -1231,7 +1297,13 @@ def get_insights(
 @app.post("/api/generate-pitch")
 def generate_client_pitch(payload: PitchPayload) -> StreamingResponse:
     client_row = get_client_row(payload.client_id)
+    verify_client_manager_access(
+        client_row,
+        manager_email=payload.manager_email,
+        manager_name=payload.manager_name,
+    )
     row_dict = {column: to_native(value) for column, value in client_row.to_dict().items()}
+    client_summary = build_client_summary(payload.client_id, row_dict)
     insights_payload = build_insights_payload(payload.client_id, row_dict)
     requested_product = resolve_pitch_product_value(payload)
     resolved_product_signal = resolve_product_signal(requested_product)
@@ -1251,7 +1323,26 @@ def generate_client_pitch(payload: PitchPayload) -> StreamingResponse:
     )
     prompt_context = build_shadow_pitch_context(payload.client_id, row_dict)
     prompt = build_shadow_pitch_prompt(payload.client_id, product_label, prompt_context)
-    client, stream_context, response = open_ollama_pitch_stream(prompt)
+
+    try:
+        client, stream_context, response = open_ollama_pitch_stream(prompt)
+    except HTTPException:
+        fallback_text = build_shadow_pitch_fallback(
+            client_id=payload.client_id,
+            product_name=product_label,
+            context=prompt_context,
+            client_summary=client_summary,
+            insights_payload=insights_payload,
+            recommendation=recommendation,
+        )
+        return StreamingResponse(
+            stream_text_chunks(fallback_text),
+            media_type="text/plain; charset=utf-8",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-LLM-Model": "fallback-rules",
+            },
+        )
 
     def stream_tokens():
         try:
