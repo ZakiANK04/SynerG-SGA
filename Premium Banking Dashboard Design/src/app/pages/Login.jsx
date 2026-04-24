@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ArrowRight, Eye, EyeOff, LoaderCircle, LockKeyhole, Mail } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { BrandLogo } from "../components/BrandLogo";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { fetchManagers } from "../lib/api";
 import { useAuth } from "../lib/auth.jsx";
 import { FALLBACK_MANAGERS } from "../lib/managers";
 import { useUIPreferences } from "../lib/ui-preferences.jsx";
@@ -37,14 +36,13 @@ export function LoginPage() {
 
   const [formValues, setFormValues] = useState({
     email: "",
-    managerName: "",
+    managerName: FALLBACK_MANAGERS[0] || "",
     password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showTransition, setShowTransition] = useState(false);
   const [managerOptions, setManagerOptions] = useState(FALLBACK_MANAGERS);
-  const [managersLoading, setManagersLoading] = useState(false);
 
   const redirectTo = location.state?.from?.pathname || "/dashboard";
 
@@ -56,46 +54,6 @@ export function LoginPage() {
       }));
     };
   }
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadManagers() {
-      setManagersLoading(true);
-
-      try {
-        const response = await fetchManagers();
-        if (!active) {
-          return;
-        }
-
-        const managers = response?.managers?.length ? response.managers : FALLBACK_MANAGERS;
-        setManagerOptions(managers);
-        setFormValues((current) => ({
-          ...current,
-          managerName: current.managerName || managers[0] || "",
-        }));
-      } catch (error) {
-        if (active) {
-          setManagerOptions(FALLBACK_MANAGERS);
-          setFormValues((current) => ({
-            ...current,
-            managerName: current.managerName || FALLBACK_MANAGERS[0] || "",
-          }));
-        }
-      } finally {
-        if (active) {
-          setManagersLoading(false);
-        }
-      }
-    }
-
-    loadManagers();
-
-    return () => {
-      active = false;
-    };
-  }, []);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -166,12 +124,11 @@ export function LoginPage() {
                 <span className="text-sm font-medium text-[#111827]">Gestionnaire</span>
                 <select
                   className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-[#111827] outline-none transition focus:border-[#E60028] focus:ring-2 focus:ring-[#E60028]"
-                  disabled={managersLoading}
                   onChange={updateField("managerName")}
                   value={formValues.managerName}
                 >
                   <option value="">
-                    {managersLoading ? "Chargement des gestionnaires..." : "Selectionnez un gestionnaire"}
+                    Selectionnez un gestionnaire
                   </option>
                   {managerOptions.map((managerName) => (
                     <option key={managerName} value={managerName}>
