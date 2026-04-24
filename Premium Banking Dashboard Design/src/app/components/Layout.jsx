@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
-import { Menu } from "lucide-react";
+import { LayoutGrid, LogOut, Search, Settings } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { BrandLogo } from "./BrandLogo";
 import { Sidebar } from "./Sidebar";
 import { Button } from "./ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { useAuth } from "../lib/auth.jsx";
 
 const SIDEBAR_STORAGE_KEY = "synerg-sidebar-collapsed";
@@ -28,8 +27,6 @@ export function AppLayout() {
   const { logout, session } = useAuth();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarState);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -53,14 +50,19 @@ export function AppLayout() {
     } else if (target === "settings") {
       navigate("/settings");
     }
-
-    setMobileSidebarOpen(false);
   }
 
   function handleLogout() {
     logout();
     navigate("/login", { replace: true });
   }
+
+  const mobileNavItems = [
+    { key: "dashboard", label: "Accueil", icon: LayoutGrid },
+    { key: "search", label: "Recherche", icon: Search },
+    { key: "settings", label: "Parametres", icon: Settings },
+    { key: "logout", label: "Sortie", icon: LogOut },
+  ];
 
   return (
     <div className="min-h-screen bg-[#F4F7FE]">
@@ -84,38 +86,46 @@ export function AppLayout() {
           sidebarCollapsed ? "lg:pl-[88px]" : "lg:pl-[272px]"
         }`}
       >
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur lg:hidden">
-          <Sheet onOpenChange={setMobileSidebarOpen} open={mobileSidebarOpen}>
-            <SheetTrigger asChild>
-              <Button
-                className="h-10 w-10 rounded-xl border border-slate-200 bg-white p-0 text-[#111827] hover:bg-slate-50"
-                type="button"
-                variant="outline"
-              >
-                <Menu className="size-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent className="w-[280px] border-r border-white/10 bg-[#1A1A1A] p-0" side="left">
-              <Sidebar
-                activeItem={activeItem}
-                collapsed={false}
-                managerLabel={session?.name || session?.managerName}
-                onLogout={handleLogout}
-                onNavigate={handleNavigate}
-                showCollapseToggle={false}
-              />
-            </SheetContent>
-          </Sheet>
-
-          <BrandLogo imageClassName="h-10 w-auto" />
-
-          <div className="w-10 shrink-0" />
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-center border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur lg:hidden">
+          <BrandLogo imageClassName="h-11 w-auto max-w-[11rem]" />
         </header>
 
-        <main className="min-h-screen overflow-y-auto p-4 lg:p-6">
+        <main className="min-h-screen overflow-y-auto p-4 pb-24 lg:p-6 lg:pb-6">
           <Outlet />
         </main>
       </div>
+
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/96 px-2 py-2 backdrop-blur lg:hidden">
+        <div className="grid grid-cols-4 gap-2">
+          {mobileNavItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = item.key !== "logout" && activeItem === item.key;
+
+            return (
+              <button
+                key={item.key}
+                className={`flex min-h-[64px] flex-col items-center justify-center rounded-2xl px-2 py-2 text-center text-[11px] font-semibold transition ${
+                  isActive
+                    ? "bg-[#FFF1F3] text-[#E60028]"
+                    : "text-[#6B7280] hover:bg-slate-100 hover:text-[#111827]"
+                }`}
+                onClick={() => {
+                  if (item.key === "logout") {
+                    handleLogout();
+                    return;
+                  }
+
+                  handleNavigate(item.key);
+                }}
+                type="button"
+              >
+                <Icon className={`mb-1 size-5 ${isActive ? "text-[#E60028]" : "text-current"}`} />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }

@@ -72,18 +72,12 @@ export function Sidebar({
           collapsed ? "justify-center" : "justify-between",
         )}
       >
-        <div className={cn("flex items-center gap-3 overflow-hidden", collapsed && "justify-center")}>
-          <BrandLogo compact={collapsed} imageClassName={collapsed ? "h-10 w-auto" : "h-12 w-auto"} withPlate />
-          {!collapsed ? (
-            <div className="min-w-0">
-              <p className="font-display truncate text-lg font-bold tracking-tight text-white">
-                SynerG
-              </p>
-              <p className="truncate text-xs font-medium text-white/52">
-                Sales Intelligence
-              </p>
-            </div>
-          ) : null}
+        <div className={cn("flex items-center overflow-hidden", collapsed && "justify-center")}>
+          <BrandLogo
+            compact={collapsed}
+            imageClassName={collapsed ? "h-10 w-auto max-w-10" : "h-20 w-auto max-w-[11rem]"}
+            withPlate={!collapsed}
+          />
         </div>
 
         {showCollapseToggle && !collapsed ? (

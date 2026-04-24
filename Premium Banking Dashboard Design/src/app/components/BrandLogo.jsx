@@ -1,4 +1,5 @@
 import { cn } from "./ui/utils";
+import synergLogo from "../../assets/Synerg.png";
 
 export function BrandLogo({
   alt = "SynerG",
@@ -10,8 +11,8 @@ export function BrandLogo({
   const image = (
     <img
       alt={alt}
-      className={cn("h-10 w-auto", compact ? "max-w-12" : "max-w-full", imageClassName)}
-      src="/logo.png"
+      className={cn("h-10 w-auto object-contain", compact ? "max-w-12" : "max-w-full", imageClassName)}
+      src={synergLogo}
     />
   );
 

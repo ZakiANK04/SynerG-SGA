@@ -496,7 +496,7 @@ export function DashboardPage() {
         <section className="rounded-xl bg-white p-5 shadow-sm sm:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="flex items-start gap-4">
-              <BrandLogo className="shrink-0" imageClassName="h-10 w-auto sm:h-12" />
+              <BrandLogo className="shrink-0" imageClassName="h-14 w-auto max-w-[11rem] sm:h-16 sm:max-w-[13rem]" />
               <div>
               <p className="text-sm font-medium text-[#6B7280]">Vue gestionnaire commercial</p>
               <h1 className="mt-2 text-2xl font-bold tracking-tight text-[#111827] sm:text-3xl">
