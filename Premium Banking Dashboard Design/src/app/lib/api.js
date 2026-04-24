@@ -37,13 +37,22 @@ export function fetchManagers() {
   return apiRequest("/api/managers");
 }
 
-export function fetchClientDetails(clientId, { managerEmail, managerName } = {}) {
+export function fetchClientDetails(
+  clientId,
+  { managerEmail, managerName, sourceClientId, allowCartographyMatch = false } = {},
+) {
   const params = new URLSearchParams();
   if (managerEmail) {
     params.set("manager_email", managerEmail);
   }
   if (managerName) {
     params.set("manager_name", managerName);
+  }
+  if (sourceClientId) {
+    params.set("source_client_id", sourceClientId);
+  }
+  if (allowCartographyMatch) {
+    params.set("allow_cartography_match", "true");
   }
 
   return apiRequest(
@@ -51,7 +60,30 @@ export function fetchClientDetails(clientId, { managerEmail, managerName } = {})
   );
 }
 
-export function fetchClientInsights(clientId, { managerEmail, managerName } = {}) {
+export function fetchClientInsights(
+  clientId,
+  { managerEmail, managerName, sourceClientId, allowCartographyMatch = false } = {},
+) {
+  const params = new URLSearchParams();
+  if (managerEmail) {
+    params.set("manager_email", managerEmail);
+  }
+  if (managerName) {
+    params.set("manager_name", managerName);
+  }
+  if (sourceClientId) {
+    params.set("source_client_id", sourceClientId);
+  }
+  if (allowCartographyMatch) {
+    params.set("allow_cartography_match", "true");
+  }
+
+  return apiRequest(
+    `/api/insights/${encodeURIComponent(clientId)}${params.toString() ? `?${params.toString()}` : ""}`,
+  );
+}
+
+export function fetchCartographyClient(clientId, { managerEmail, managerName } = {}) {
   const params = new URLSearchParams();
   if (managerEmail) {
     params.set("manager_email", managerEmail);
@@ -61,7 +93,22 @@ export function fetchClientInsights(clientId, { managerEmail, managerName } = {}
   }
 
   return apiRequest(
-    `/api/insights/${encodeURIComponent(clientId)}${params.toString() ? `?${params.toString()}` : ""}`,
+    `/api/cartography/client/${encodeURIComponent(clientId)}${params.toString() ? `?${params.toString()}` : ""}`,
+  );
+}
+
+export function fetchSimilarClients(clientId, { managerEmail, managerName, limit = 5 } = {}) {
+  const params = new URLSearchParams();
+  if (managerEmail) {
+    params.set("manager_email", managerEmail);
+  }
+  if (managerName) {
+    params.set("manager_name", managerName);
+  }
+  params.set("limit", String(limit));
+
+  return apiRequest(
+    `/api/cartography/similar/${encodeURIComponent(clientId)}${params.toString() ? `?${params.toString()}` : ""}`,
   );
 }
 

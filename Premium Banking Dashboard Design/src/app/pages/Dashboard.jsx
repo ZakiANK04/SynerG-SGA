@@ -196,6 +196,8 @@ export function DashboardPage() {
   ]);
   const deferredSearch = useDeferredValue(portfolioSearch);
   const selectedClientId = searchParams.get("client") || "";
+  const sourceClientId = searchParams.get("source_client") || "";
+  const allowCartographyMatch = searchParams.get("allow_cartography_match") === "true";
   const clients = portfolio?.clients || [];
   const summary = portfolio?.summary || {};
   const normalizedSearch = portfolioSearch.trim().toLowerCase();
@@ -436,12 +438,16 @@ export function DashboardPage() {
       try {
         const [clientPayload, insightsPayload] = await Promise.all([
           fetchClientDetails(selectedClientId, {
+            allowCartographyMatch,
             managerEmail: session?.email,
             managerName: session?.managerName,
+            sourceClientId,
           }),
           fetchClientInsights(selectedClientId, {
+            allowCartographyMatch,
             managerEmail: session?.email,
             managerName: session?.managerName,
+            sourceClientId,
           }),
         ]);
 
@@ -470,7 +476,7 @@ export function DashboardPage() {
     return () => {
       active = false;
     };
-  }, [selectedClientId, session?.email, session?.managerName]);
+  }, [allowCartographyMatch, selectedClientId, session?.email, session?.managerName, sourceClientId]);
 
   useEffect(() => {
     if (!selectedRecommendation) {
@@ -501,12 +507,16 @@ export function DashboardPage() {
 
     const [clientPayload, insightsPayload] = await Promise.all([
       fetchClientDetails(selectedClientId, {
+        allowCartographyMatch,
         managerEmail: session?.email,
         managerName: session?.managerName,
+        sourceClientId,
       }),
       fetchClientInsights(selectedClientId, {
+        allowCartographyMatch,
         managerEmail: session?.email,
         managerName: session?.managerName,
+        sourceClientId,
       }),
     ]);
 
@@ -525,6 +535,8 @@ export function DashboardPage() {
     const nextParams = new URLSearchParams(searchParams);
     nextParams.set("client", clientId);
     nextParams.delete("focus");
+    nextParams.delete("source_client");
+    nextParams.delete("allow_cartography_match");
 
     startTransition(() => {
       setSearchParams(nextParams);
@@ -534,6 +546,8 @@ export function DashboardPage() {
   function closeClientView() {
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete("client");
+    nextParams.delete("source_client");
+    nextParams.delete("allow_cartography_match");
 
     startTransition(() => {
       setSearchParams(nextParams);
@@ -999,9 +1013,19 @@ export function DashboardPage() {
                       <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
                         <Sparkles className="mt-0.5 size-5 text-[#E60028]" />
                         <div>
-                          <p className="text-sm font-medium text-[#6B7280]">Persona</p>
+                          <p className="text-sm font-medium text-[#6B7280]">Statut</p>
                           <p className="mt-1 text-sm font-semibold text-[#111827]">
                             {insights.persona || client.summary.persona || "N/A"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 rounded-xl bg-slate-50 p-4">
+                        <Users className="mt-0.5 size-5 text-[#E60028]" />
+                        <div>
+                          <p className="text-sm font-medium text-[#6B7280]">Employees du client</p>
+                          <p className="mt-1 text-sm font-semibold text-[#111827]">
+                            {`${Number(client.summary.employees_count || 0)} employes`}
                           </p>
                         </div>
                       </div>
@@ -1187,8 +1211,8 @@ export function DashboardPage() {
 
                 <section className="space-y-4">
                   <div>
-                    <p className="text-sm font-medium text-[#6B7280]">Section KPI client</p>
-                    <h3 className="mt-1 text-xl font-bold text-[#111827]">KPIs financiers</h3>
+                    <p className="text-sm font-medium text-[#6B7280]">Section informations bancaires</p>
+                    <h3 className="mt-1 text-xl font-bold text-[#111827]">Informations bancaires</h3>
                   </div>
 
                   <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-5">
@@ -1243,9 +1267,9 @@ export function DashboardPage() {
                       value={formatYears(client.summary.relation_age_years || 0)}
                     />
                     <KpiCard
-                      label="Activite RH"
-                      supporting={client.summary.is_international ? "Client international" : "Client domestique"}
-                      value={`${Number(client.summary.employees_count || 0)} employes`}
+                      label="Ouverture internationale"
+                      supporting="Lecture du perimetre commercial du client"
+                      value={client.summary.is_international ? "International" : "Domestique"}
                     />
                   </div>
 

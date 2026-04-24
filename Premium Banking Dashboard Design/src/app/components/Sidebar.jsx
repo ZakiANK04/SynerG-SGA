@@ -3,6 +3,7 @@ import {
   ChevronRight,
   LayoutGrid,
   LogOut,
+  Map,
   Search,
   Settings,
 } from "lucide-react";
@@ -21,6 +22,11 @@ const NAV_ITEMS = [
     key: "search",
     label: "Recherche Client",
     icon: Search,
+  },
+  {
+    key: "cartography",
+    label: "Cartographie",
+    icon: Map,
   },
   {
     key: "settings",

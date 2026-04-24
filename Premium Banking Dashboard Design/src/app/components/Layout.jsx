@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LayoutGrid, LogOut, Search, Settings } from "lucide-react";
+import { LayoutGrid, LogOut, Map, Search, Settings } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { BrandLogo } from "./BrandLogo";
@@ -38,6 +38,8 @@ export function AppLayout() {
   const activeItem =
     location.pathname === "/settings"
       ? "settings"
+      : location.pathname === "/cartography"
+        ? "cartography"
       : new URLSearchParams(location.search).get("focus") === "search"
         ? "search"
         : "dashboard";
@@ -45,6 +47,8 @@ export function AppLayout() {
   function handleNavigate(target) {
     if (target === "dashboard") {
       navigate("/dashboard");
+    } else if (target === "cartography") {
+      navigate("/cartography");
     } else if (target === "search") {
       navigate("/dashboard?focus=search");
     } else if (target === "settings") {
@@ -58,6 +62,7 @@ export function AppLayout() {
 
   const mobileNavItems = [
     { key: "dashboard", label: "Accueil", icon: LayoutGrid },
+    { key: "cartography", label: "Carte", icon: Map },
     { key: "search", label: "Recherche", icon: Search },
     { key: "settings", label: "Parametres", icon: Settings },
     { key: "logout", label: "Sortie", icon: LogOut },
@@ -95,7 +100,7 @@ export function AppLayout() {
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/96 px-2 py-2 backdrop-blur lg:hidden">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-5 gap-2">
           {mobileNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = item.key !== "logout" && activeItem === item.key;

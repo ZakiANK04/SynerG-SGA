@@ -23,6 +23,11 @@ try:
 except ImportError:  # pragma: no cover - optional when local Ollama is disabled
     httpx = None
 
+try:
+    from sklearn.neighbors import NearestNeighbors
+except ImportError:  # pragma: no cover - optional until dependency is installed
+    NearestNeighbors = None
+
 BASE_DIR = Path(__file__).resolve().parent
 CSV_PATH = BASE_DIR / "df_final_features.csv"
 INSIGHTS_PATH = BASE_DIR / "client_ai_insights.json"
@@ -140,6 +145,12 @@ PRODUCT_FAMILY_FALLBACK = {
     "Cash Management": "#111827",
     "Trade Finance": "#FB923C",
     "Relationship Banking": "#38BDF8",
+}
+
+CARTOGRAPHY_SEGMENT_COLORS = {
+    "VIP": "#E60028",
+    "GE": "#E60028",
+    "PME": "#1A1A1A",
 }
 
 STOPWORDS_NORMALIZED = {
@@ -394,6 +405,32 @@ BANDIT = UCBBandit(arms=PRODUCT_ARMS, contexts=PERSONA_CONTEXTS or ["GLOBAL"])
 FEEDBACK_LOCK = Lock()
 
 DATAFRAME_BY_CLIENT = DATAFRAME.set_index("Client", drop=False)
+CARTOGRAPHY_FEATURE_CANDIDATES = [
+    "PNB_NET_15m",
+    "PNB NET_mean_15m",
+    "Flux Créditeurs_mean_15m",
+    "Flux_Crediteurs_Current_3M",
+    "Flux_Crediteurs_Previous_3M",
+    "total engagement_mean_15m",
+    "total engagement_sum_15m",
+    "chiffre d'affaire",
+    "Commissions_mean_15m",
+    "Commissions_sum_15m",
+    "Taux_Utilisation_Credit",
+    "Score_Digital_Actif",
+    "Cash_Transactions_15m",
+    "Flux Export_mean_15m",
+    "Flux IMPORT_mean_15m",
+]
+CARTOGRAPHY_FEATURE_COLUMNS = [
+    column for column in CARTOGRAPHY_FEATURE_CANDIDATES if column in DATAFRAME.columns
+]
+CARTOGRAPHY_FEATURE_MATRIX = DATAFRAME[CARTOGRAPHY_FEATURE_COLUMNS].fillna(0).applymap(safe_float)
+if CARTOGRAPHY_FEATURE_COLUMNS:
+    _cartography_std = CARTOGRAPHY_FEATURE_MATRIX.std().replace(0, 1).fillna(1)
+    CARTOGRAPHY_FEATURE_MATRIX_SCALED = (CARTOGRAPHY_FEATURE_MATRIX - CARTOGRAPHY_FEATURE_MATRIX.mean()) / _cartography_std
+else:
+    CARTOGRAPHY_FEATURE_MATRIX_SCALED = CARTOGRAPHY_FEATURE_MATRIX
 
 
 def save_bandit_snapshot() -> None:
@@ -466,6 +503,47 @@ def canonicalize_manager_name(value: Any) -> str:
 
     candidate = f"Ges{int(number_match.group(1))}"
     return candidate if candidate in MANAGER_SET else ""
+
+
+def canonicalize_wilaya_name(value: Any) -> str:
+    normalized_value = normalize_text(value)
+    if not normalized_value:
+        return ""
+
+    normalized_value = re.sub(r"\d+", " ", normalized_value)
+    normalized_value = re.sub(r"\s+", " ", normalized_value).strip()
+    aliases = {
+        "alger": "Alger",
+        "oran": "Oran",
+        "annaba": "Annaba",
+        "constantine": "Constantine",
+        "setif": "Setif",
+        "bejaia": "Bejaia",
+        "bejaïa": "Bejaia",
+        "blida": "Blida",
+        "batna": "Batna",
+        "bouira": "Bouira",
+        "chlef": "Chlef",
+        "djelfa": "Djelfa",
+        "jijel": "Jijel",
+        "skikda": "Skikda",
+        "tiaret": "Tiaret",
+        "tizi ouzou": "Tizi Ouzou",
+        "tlemcen": "Tlemcen",
+        "tipaza": "Tipaza",
+        "sidi bel abbes": "Sidi Bel Abbes",
+    }
+
+    exact_match = aliases.get(normalized_value)
+    if exact_match:
+        return exact_match
+
+    return " ".join(part.capitalize() for part in normalized_value.split(" "))
+
+
+def get_segment_color(segment_value: Any) -> str:
+    normalized_segment = clean_string(segment_value).upper()
+    return CARTOGRAPHY_SEGMENT_COLORS.get(normalized_segment, "#6B7280")
 
 
 def resolve_manager_name(
@@ -644,6 +722,139 @@ def build_manager_portfolio_summary(dataframe: pd.DataFrame) -> dict[str, Any]:
         "total_pnb": round(total_pnb, 2),
         "average_flux_confie_pct": round(average_flux_confie_pct, 2),
     }
+
+
+def ensure_cartography_model_ready() -> None:
+    if NearestNeighbors is None:
+        raise HTTPException(
+            status_code=503,
+            detail="scikit-learn est indisponible sur le serveur. Installez les dependances du backend.",
+        )
+
+    if not CARTOGRAPHY_FEATURE_COLUMNS:
+        raise HTTPException(
+            status_code=500,
+            detail="Aucune feature numerique exploitable n'a ete trouvee pour la cartographie.",
+        )
+
+
+def build_cartography_client_payload(client_id: str, row_dict: dict[str, Any]) -> dict[str, Any]:
+    segment = clean_string(row_dict.get("Segmenattion"))
+    wilaya = canonicalize_wilaya_name(row_dict.get("Wilaya"))
+    manager = clean_string(row_dict.get(MANAGER_COLUMN))
+
+    return {
+        "client_id": client_id,
+        "display_name": clean_string(row_dict.get("Groupe")) or f"Client {client_id}",
+        "wilaya": wilaya or "N/A",
+        "segment": segment or "Autre",
+        "manager": manager or "N/A",
+        "color": get_segment_color(segment),
+    }
+
+
+def build_similar_clients_payload(client_id: str, row_dict: dict[str, Any], limit: int = 5) -> list[dict[str, Any]]:
+    ensure_cartography_model_ready()
+
+    target_index_list = DATAFRAME.index[DATAFRAME["Client"].astype(str) == client_id].tolist()
+    if not target_index_list:
+        raise HTTPException(status_code=404, detail=f"Client {client_id} introuvable.")
+
+    target_index = target_index_list[0]
+    target_vector = CARTOGRAPHY_FEATURE_MATRIX_SCALED.iloc[[target_index]]
+    target_wilaya = canonicalize_wilaya_name(row_dict.get("Wilaya"))
+    target_manager = clean_string(row_dict.get(MANAGER_COLUMN))
+
+    model = NearestNeighbors(
+        metric="euclidean",
+        n_neighbors=min(max(limit * 12, 20), len(CARTOGRAPHY_FEATURE_MATRIX_SCALED)),
+    )
+    model.fit(CARTOGRAPHY_FEATURE_MATRIX_SCALED)
+
+    distances, indices = model.kneighbors(target_vector)
+    results = []
+    eligible_distances = []
+
+    for distance, neighbor_index in zip(distances[0], indices[0]):
+        neighbor_row = DATAFRAME.iloc[int(neighbor_index)]
+        neighbor_client_id = clean_string(neighbor_row.get("Client"))
+        neighbor_wilaya = canonicalize_wilaya_name(neighbor_row.get("Wilaya"))
+        neighbor_manager = clean_string(neighbor_row.get(MANAGER_COLUMN))
+
+        if neighbor_client_id == client_id:
+            continue
+        if neighbor_wilaya and target_wilaya and neighbor_wilaya == target_wilaya:
+            continue
+        if neighbor_manager and target_manager and neighbor_manager == target_manager:
+            continue
+
+        eligible_distances.append(float(distance))
+
+    max_distance = max(eligible_distances) if eligible_distances else 1.0
+
+    for distance, neighbor_index in zip(distances[0], indices[0]):
+        neighbor_row = DATAFRAME.iloc[int(neighbor_index)]
+        neighbor_client_id = clean_string(neighbor_row.get("Client"))
+        neighbor_wilaya = canonicalize_wilaya_name(neighbor_row.get("Wilaya"))
+        neighbor_manager = clean_string(neighbor_row.get(MANAGER_COLUMN))
+
+        if neighbor_client_id == client_id:
+            continue
+        if neighbor_wilaya and target_wilaya and neighbor_wilaya == target_wilaya:
+            continue
+        if neighbor_manager and target_manager and neighbor_manager == target_manager:
+            continue
+
+        distance_value = float(distance)
+        similarity_pct = 100.0 if max_distance <= 0 else max(0.0, min(100.0, (1 - (distance_value / max_distance)) * 100))
+        results.append(
+            {
+                "client_id": neighbor_client_id,
+                "display_name": clean_string(neighbor_row.get("Groupe")) or f"Client {neighbor_client_id}",
+                "wilaya": neighbor_wilaya or "N/A",
+                "manager": neighbor_manager or "N/A",
+                "segment": clean_string(neighbor_row.get("Segmenattion")) or "Autre",
+                "color": get_segment_color(neighbor_row.get("Segmenattion")),
+                "similarity_pct": round(similarity_pct, 1),
+                "distance": round(distance_value, 4),
+                "pnb_net": round(
+                    safe_float(neighbor_row.get("PNB_NET_15m") or neighbor_row.get("PNB NET_sum_15m")),
+                    2,
+                ),
+            }
+        )
+
+        if len(results) >= limit:
+            break
+
+    return results
+
+
+def verify_cartography_match_access(
+    requested_client_row: pd.Series,
+    source_client_id: str | None,
+    manager_email: str | None = None,
+    manager_name: str | None = None,
+) -> None:
+    source_client_key = clean_string(source_client_id)
+    if not source_client_key:
+        raise HTTPException(status_code=403, detail="Acces cartographie non autorise.")
+
+    source_client_row = get_client_row(source_client_key)
+    verify_client_manager_access(
+        source_client_row,
+        manager_email=manager_email,
+        manager_name=manager_name,
+    )
+
+    source_row_dict = {column: to_native(value) for column, value in source_client_row.to_dict().items()}
+    allowed_matches = {
+        match["client_id"]
+        for match in build_similar_clients_payload(source_client_key, source_row_dict, limit=10)
+    }
+    requested_client_id = clean_string(requested_client_row.get("Client"))
+    if requested_client_id not in allowed_matches:
+        raise HTTPException(status_code=403, detail="Le client demande ne fait pas partie des jumeaux autorises.")
 
 
 def build_pitch_prompt(
@@ -1307,13 +1518,23 @@ def get_client(
     client_id: str,
     manager_email: str | None = Query(default=None, description="Email du gestionnaire connecte"),
     manager_name: str | None = Query(default=None, description="Nom canonique du gestionnaire"),
+    source_client_id: str | None = Query(default=None, description="Client source depuis la cartographie"),
+    allow_cartography_match: bool = Query(default=False, description="Autorise la lecture d'un client jumeau depuis la cartographie"),
 ) -> dict[str, Any]:
     client_row = get_client_row(client_id)
-    verify_client_manager_access(
-        client_row,
-        manager_email=manager_email,
-        manager_name=manager_name,
-    )
+    if allow_cartography_match:
+        verify_cartography_match_access(
+            client_row,
+            source_client_id=source_client_id,
+            manager_email=manager_email,
+            manager_name=manager_name,
+        )
+    else:
+        verify_client_manager_access(
+            client_row,
+            manager_email=manager_email,
+            manager_name=manager_name,
+        )
     row_dict = {column: to_native(value) for column, value in client_row.to_dict().items()}
     summary = build_client_summary(client_id, row_dict)
 
@@ -1329,6 +1550,32 @@ def get_insights(
     client_id: str,
     manager_email: str | None = Query(default=None, description="Email du gestionnaire connecte"),
     manager_name: str | None = Query(default=None, description="Nom canonique du gestionnaire"),
+    source_client_id: str | None = Query(default=None, description="Client source depuis la cartographie"),
+    allow_cartography_match: bool = Query(default=False, description="Autorise la lecture d'un client jumeau depuis la cartographie"),
+) -> dict[str, Any]:
+    client_row = get_client_row(client_id)
+    if allow_cartography_match:
+        verify_cartography_match_access(
+            client_row,
+            source_client_id=source_client_id,
+            manager_email=manager_email,
+            manager_name=manager_name,
+        )
+    else:
+        verify_client_manager_access(
+            client_row,
+            manager_email=manager_email,
+            manager_name=manager_name,
+        )
+    row_dict = {column: to_native(value) for column, value in client_row.to_dict().items()}
+    return build_insights_payload(client_id, row_dict)
+
+
+@app.get("/api/cartography/client/{client_id}")
+def get_cartography_client(
+    client_id: str,
+    manager_email: str | None = Query(default=None, description="Email du gestionnaire connecte"),
+    manager_name: str | None = Query(default=None, description="Nom canonique du gestionnaire"),
 ) -> dict[str, Any]:
     client_row = get_client_row(client_id)
     verify_client_manager_access(
@@ -1337,7 +1584,28 @@ def get_insights(
         manager_name=manager_name,
     )
     row_dict = {column: to_native(value) for column, value in client_row.to_dict().items()}
-    return build_insights_payload(client_id, row_dict)
+    return build_cartography_client_payload(client_id, row_dict)
+
+
+@app.get("/api/cartography/similar/{client_id}")
+def get_cartography_similar_clients(
+    client_id: str,
+    manager_email: str | None = Query(default=None, description="Email du gestionnaire connecte"),
+    manager_name: str | None = Query(default=None, description="Nom canonique du gestionnaire"),
+    limit: int = Query(default=5, ge=1, le=10),
+) -> dict[str, Any]:
+    client_row = get_client_row(client_id)
+    verify_client_manager_access(
+        client_row,
+        manager_email=manager_email,
+        manager_name=manager_name,
+    )
+    row_dict = {column: to_native(value) for column, value in client_row.to_dict().items()}
+    return {
+        "client_id": client_id,
+        "base_client": build_cartography_client_payload(client_id, row_dict),
+        "matches": build_similar_clients_payload(client_id, row_dict, limit=limit),
+    }
 
 
 @app.post("/api/generate-pitch")

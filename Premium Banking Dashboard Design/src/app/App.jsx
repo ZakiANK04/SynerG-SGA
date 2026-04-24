@@ -9,6 +9,7 @@ import { AuthProvider, ProtectedRoute, PublicOnlyRoute } from "./lib/auth.jsx";
 import { UIPreferencesProvider, useUIPreferences } from "./lib/ui-preferences.jsx";
 import { DashboardPage } from "./pages/Dashboard";
 import { FeedbackConfirmationPage } from "./pages/FeedbackConfirmation";
+import { CartographyPage } from "./pages/Cartography";
 import { LoginPage } from "./pages/Login";
 import { SettingsPage } from "./pages/Settings";
 
@@ -146,6 +147,7 @@ function AnimatedRoutes({ disableTransitions = false }) {
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
             <Route element={<DashboardPage />} path="/dashboard" />
+            <Route element={<CartographyPage />} path="/cartography" />
             <Route element={<FeedbackConfirmationPage />} path="/feedback-confirmation" />
             <Route element={<SettingsPage />} path="/settings" />
           </Route>
