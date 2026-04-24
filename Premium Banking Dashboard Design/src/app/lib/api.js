@@ -33,12 +33,36 @@ export function fetchClientIds(query = "") {
   return apiRequest(`/api/clients${params.toString() ? `?${params.toString()}` : ""}`);
 }
 
-export function fetchClientDetails(clientId) {
-  return apiRequest(`/api/clients/${encodeURIComponent(clientId)}`);
+export function fetchManagers() {
+  return apiRequest("/api/managers");
 }
 
-export function fetchClientInsights(clientId) {
-  return apiRequest(`/api/insights/${encodeURIComponent(clientId)}`);
+export function fetchClientDetails(clientId, { managerEmail, managerName } = {}) {
+  const params = new URLSearchParams();
+  if (managerEmail) {
+    params.set("manager_email", managerEmail);
+  }
+  if (managerName) {
+    params.set("manager_name", managerName);
+  }
+
+  return apiRequest(
+    `/api/clients/${encodeURIComponent(clientId)}${params.toString() ? `?${params.toString()}` : ""}`,
+  );
+}
+
+export function fetchClientInsights(clientId, { managerEmail, managerName } = {}) {
+  const params = new URLSearchParams();
+  if (managerEmail) {
+    params.set("manager_email", managerEmail);
+  }
+  if (managerName) {
+    params.set("manager_name", managerName);
+  }
+
+  return apiRequest(
+    `/api/insights/${encodeURIComponent(clientId)}${params.toString() ? `?${params.toString()}` : ""}`,
+  );
 }
 
 export function fetchManagerClients({

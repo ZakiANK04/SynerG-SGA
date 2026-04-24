@@ -14,7 +14,6 @@ export function SettingsPage() {
 
   function handleLogout() {
     logout();
-    navigate("/login", { replace: true });
   }
 
   return (

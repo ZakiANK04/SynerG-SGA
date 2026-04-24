@@ -54,7 +54,6 @@ export function AppLayout() {
 
   function handleLogout() {
     logout();
-    navigate("/login", { replace: true });
   }
 
   const mobileNavItems = [

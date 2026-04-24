@@ -5,7 +5,7 @@ import { Toaster } from "sonner";
 import introVideo from "../assets/intro-video.mp4";
 import { BrandLogo } from "./components/BrandLogo";
 import { AppLayout } from "./components/Layout";
-import { AuthProvider, ProtectedRoute, PublicOnlyRoute } from "./lib/auth.jsx";
+import { AuthProvider, ProtectedRoute, PublicOnlyRoute, useAuth } from "./lib/auth.jsx";
 import { UIPreferencesProvider, useUIPreferences } from "./lib/ui-preferences.jsx";
 import { DashboardPage } from "./pages/Dashboard";
 import { FeedbackConfirmationPage } from "./pages/FeedbackConfirmation";
@@ -102,6 +102,7 @@ function IntroOverlay({ onComplete }) {
 function AnimatedRoutes({ disableTransitions = false }) {
   const location = useLocation();
   const { animationsEnabled } = useUIPreferences();
+  const { isAuthenticated } = useAuth();
 
   const [displayLocation, setDisplayLocation] = useState(location);
   const [transitionActive, setTransitionActive] = useState(false);
@@ -144,6 +145,12 @@ function AnimatedRoutes({ disableTransitions = false }) {
       window.clearTimeout(closeTimer);
     };
   }, [animationsEnabled, disableTransitions, location]);
+
+  useEffect(() => {
+    previousLocationRef.current = `${location.pathname}${location.search}`;
+    setDisplayLocation(location);
+    setTransitionActive(false);
+  }, [isAuthenticated, location]);
 
   return (
     <>

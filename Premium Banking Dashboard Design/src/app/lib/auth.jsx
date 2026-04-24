@@ -12,13 +12,13 @@ function toTitleCase(value) {
     .join(" ");
 }
 
-function buildProfileFromEmail(email) {
+function buildProfileFromEmail(email, managerNameOverride) {
   const normalizedEmail = String(email || "").trim().toLowerCase();
   const emailLocalPart = normalizedEmail.split("@")[0] || "gestionnaire";
   const managerMatch = emailLocalPart.match(/ges\d+/i);
-  const managerName = managerMatch
-    ? managerMatch[0].replace(/^ges/i, "Ges")
-    : toTitleCase(emailLocalPart);
+  const managerName =
+    String(managerNameOverride || "").trim() ||
+    (managerMatch ? managerMatch[0].replace(/^ges/i, "Ges") : toTitleCase(emailLocalPart));
 
   return {
     agency: "Agence Corporate Alger Centre",
@@ -61,8 +61,8 @@ export function AuthProvider({ children }) {
     () => ({
       session,
       isAuthenticated: Boolean(session?.token),
-      login(email) {
-        const profile = buildProfileFromEmail(email);
+      login(email, options = {}) {
+        const profile = buildProfileFromEmail(email, options.managerName);
         const nextSession = {
           ...profile,
           token: `demo-${Date.now()}`,

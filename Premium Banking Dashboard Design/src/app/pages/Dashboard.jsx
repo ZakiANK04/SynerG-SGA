@@ -264,6 +264,7 @@ export function DashboardPage() {
       try {
         const response = await fetchManagerClients({
           managerEmail: session?.email,
+          managerName: session?.managerName,
           query: deferredSearch,
           sortBy: "churn",
         });
@@ -289,7 +290,7 @@ export function DashboardPage() {
     return () => {
       active = false;
     };
-  }, [deferredSearch, session?.email]);
+  }, [deferredSearch, session?.email, session?.managerName]);
 
   useEffect(() => {
     let active = true;
@@ -307,8 +308,14 @@ export function DashboardPage() {
 
       try {
         const [clientPayload, insightsPayload] = await Promise.all([
-          fetchClientDetails(selectedClientId),
-          fetchClientInsights(selectedClientId),
+          fetchClientDetails(selectedClientId, {
+            managerEmail: session?.email,
+            managerName: session?.managerName,
+          }),
+          fetchClientInsights(selectedClientId, {
+            managerEmail: session?.email,
+            managerName: session?.managerName,
+          }),
         ]);
 
         if (!active) {
@@ -336,7 +343,7 @@ export function DashboardPage() {
     return () => {
       active = false;
     };
-  }, [selectedClientId]);
+  }, [selectedClientId, session?.email, session?.managerName]);
 
   useEffect(() => {
     if (!selectedRecommendation) {
@@ -366,8 +373,14 @@ export function DashboardPage() {
     }
 
     const [clientPayload, insightsPayload] = await Promise.all([
-      fetchClientDetails(selectedClientId),
-      fetchClientInsights(selectedClientId),
+      fetchClientDetails(selectedClientId, {
+        managerEmail: session?.email,
+        managerName: session?.managerName,
+      }),
+      fetchClientInsights(selectedClientId, {
+        managerEmail: session?.email,
+        managerName: session?.managerName,
+      }),
     ]);
 
     setClient(clientPayload);

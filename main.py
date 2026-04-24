@@ -492,6 +492,29 @@ def resolve_manager_name(
     return "", "unresolved"
 
 
+def verify_client_manager_access(
+    client_row: pd.Series,
+    manager_email: str | None = None,
+    manager_name: str | None = None,
+) -> tuple[str, str] | None:
+    if not clean_string(manager_email) and not clean_string(manager_name):
+        return None
+
+    resolved_manager, resolution_source = resolve_manager_name(
+        manager_email=manager_email,
+        manager_name=manager_name,
+    )
+    client_manager = clean_string(client_row.get(MANAGER_COLUMN))
+
+    if resolved_manager and client_manager != resolved_manager:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Le client demande n'est pas rattache au gestionnaire {resolved_manager}.",
+        )
+
+    return resolved_manager, resolution_source
+
+
 def build_manager_client_row(client_id: str, row_dict: dict[str, Any]) -> dict[str, Any]:
     client_summary = build_client_summary(client_id, row_dict)
     return {
@@ -1114,6 +1137,14 @@ def list_clients(
     return {"clients": client_ids[:limit], "total": len(client_ids)}
 
 
+@app.get("/api/managers")
+def list_managers() -> dict[str, Any]:
+    return {
+        "managers": MANAGER_NAMES,
+        "total": len(MANAGER_NAMES),
+    }
+
+
 @app.get("/api/manager/clients")
 def list_manager_clients(
     manager_email: str | None = Query(default=None, description="Email du gestionnaire connecté"),
@@ -1160,8 +1191,17 @@ def list_manager_clients(
 
 
 @app.get("/api/clients/{client_id}")
-def get_client(client_id: str) -> dict[str, Any]:
+def get_client(
+    client_id: str,
+    manager_email: str | None = Query(default=None, description="Email du gestionnaire connecte"),
+    manager_name: str | None = Query(default=None, description="Nom canonique du gestionnaire"),
+) -> dict[str, Any]:
     client_row = get_client_row(client_id)
+    verify_client_manager_access(
+        client_row,
+        manager_email=manager_email,
+        manager_name=manager_name,
+    )
     row_dict = {column: to_native(value) for column, value in client_row.to_dict().items()}
     summary = build_client_summary(client_id, row_dict)
 
@@ -1173,8 +1213,17 @@ def get_client(client_id: str) -> dict[str, Any]:
 
 
 @app.get("/api/insights/{client_id}")
-def get_insights(client_id: str) -> dict[str, Any]:
+def get_insights(
+    client_id: str,
+    manager_email: str | None = Query(default=None, description="Email du gestionnaire connecte"),
+    manager_name: str | None = Query(default=None, description="Nom canonique du gestionnaire"),
+) -> dict[str, Any]:
     client_row = get_client_row(client_id)
+    verify_client_manager_access(
+        client_row,
+        manager_email=manager_email,
+        manager_name=manager_name,
+    )
     row_dict = {column: to_native(value) for column, value in client_row.to_dict().items()}
     return build_insights_payload(client_id, row_dict)
 

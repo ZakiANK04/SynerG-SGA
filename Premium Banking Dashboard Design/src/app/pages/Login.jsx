@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight, Eye, EyeOff, LoaderCircle, LockKeyhole, Mail } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { BrandLogo } from "../components/BrandLogo";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { fetchManagers } from "../lib/api";
 import { useAuth } from "../lib/auth.jsx";
 import { useUIPreferences } from "../lib/ui-preferences.jsx";
 import loginHero from "../../assets/login-hero.png";
@@ -35,11 +36,14 @@ export function LoginPage() {
 
   const [formValues, setFormValues] = useState({
     email: "",
+    managerName: "",
     password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showTransition, setShowTransition] = useState(false);
+  const [managerOptions, setManagerOptions] = useState([]);
+  const [managersLoading, setManagersLoading] = useState(true);
 
   const redirectTo = location.state?.from?.pathname || "/dashboard";
 
@@ -52,11 +56,47 @@ export function LoginPage() {
     };
   }
 
+  useEffect(() => {
+    let active = true;
+
+    async function loadManagers() {
+      setManagersLoading(true);
+
+      try {
+        const response = await fetchManagers();
+        if (!active) {
+          return;
+        }
+
+        const managers = response?.managers || [];
+        setManagerOptions(managers);
+        setFormValues((current) => ({
+          ...current,
+          managerName: current.managerName || managers[0] || "",
+        }));
+      } catch (error) {
+        if (active) {
+          toast.error(error.message || "Impossible de charger la liste des gestionnaires.");
+        }
+      } finally {
+        if (active) {
+          setManagersLoading(false);
+        }
+      }
+    }
+
+    loadManagers();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   async function handleSubmit(event) {
     event.preventDefault();
 
-    if (!formValues.email || !formValues.password) {
-      toast.error("Saisissez votre email et votre mot de passe.");
+    if (!formValues.email || !formValues.password || !formValues.managerName) {
+      toast.error("Saisissez votre email, votre mot de passe et votre gestionnaire.");
       return;
     }
 
@@ -73,7 +113,7 @@ export function LoginPage() {
       });
     }
 
-    login(formValues.email.trim());
+    login(formValues.email.trim(), { managerName: formValues.managerName });
     navigate(redirectTo, { replace: true });
   }
 
@@ -115,6 +155,25 @@ export function LoginPage() {
                     value={formValues.email}
                   />
                 </div>
+              </label>
+
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-[#111827]">Gestionnaire</span>
+                <select
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-[#111827] outline-none transition focus:border-[#E60028] focus:ring-2 focus:ring-[#E60028]"
+                  disabled={managersLoading}
+                  onChange={updateField("managerName")}
+                  value={formValues.managerName}
+                >
+                  <option value="">
+                    {managersLoading ? "Chargement des gestionnaires..." : "Selectionnez un gestionnaire"}
+                  </option>
+                  {managerOptions.map((managerName) => (
+                    <option key={managerName} value={managerName}>
+                      {managerName}
+                    </option>
+                  ))}
+                </select>
               </label>
 
               <label className="block space-y-2">
