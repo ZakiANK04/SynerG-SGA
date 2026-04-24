@@ -12,12 +12,16 @@ from pathlib import Path
 from threading import Lock
 from typing import Any
 
-import httpx
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+
+try:
+    import httpx
+except ImportError:  # pragma: no cover - optional when local Ollama is disabled
+    httpx = None
 
 BASE_DIR = Path(__file__).resolve().parent
 CSV_PATH = BASE_DIR / "df_final_features.csv"
@@ -764,6 +768,12 @@ def extract_ollama_error(response: httpx.Response, base_url: str) -> str:
 
 
 def open_ollama_pitch_stream(prompt: str) -> tuple[httpx.Client, Any, httpx.Response]:
+    if httpx is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Le module httpx est indisponible sur le serveur. Le pitch local Ollama est desactive.",
+        )
+
     payload = {
         "model": OLLAMA_MODEL,
         "prompt": prompt,
