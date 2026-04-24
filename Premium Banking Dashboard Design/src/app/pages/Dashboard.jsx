@@ -1,6 +1,7 @@
 import { startTransition, useDeferredValue, useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
+  BarChart3,
   BrainCircuit,
   Building2,
   CalendarDays,
@@ -15,7 +16,18 @@ import {
   UserRound,
   Users,
 } from "lucide-react";
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -58,6 +70,13 @@ function formatCurrencyDa(value, compact = false) {
 
 function formatPercent(value, digits = 1) {
   return `${Number(value || 0).toFixed(digits)}%`;
+}
+
+function formatCompactNumber(value) {
+  return new Intl.NumberFormat("fr-FR", {
+    maximumFractionDigits: 1,
+    notation: "compact",
+  }).format(Number(value || 0));
 }
 
 function formatDate(value) {
@@ -182,6 +201,38 @@ export function DashboardPage() {
   const selectedRecommendation =
     recommendations.find((item) => item.product_signal === selectedProductId) ||
     recommendations[0];
+  const fluxComparisonData = client
+    ? [
+        {
+          label: "Flux actuel",
+          value: Number(client.summary.flux_current_3m || 0),
+        },
+        {
+          label: "Flux precedent",
+          value: Number(client.summary.flux_previous_3m || 0),
+        },
+      ]
+    : [];
+  const relationshipRatioData = client
+    ? [
+        {
+          label: "Flux confie",
+          value: Number(client.summary.flux_confie_pct || 0),
+        },
+        {
+          label: "Marge PNB",
+          value: Number(client.summary.pnb_margin_pct || 0),
+        },
+        {
+          label: "Digital",
+          value: Number(client.summary.digital_score || 0),
+        },
+        {
+          label: "Util. credit",
+          value: Number(client.summary.credit_utilization_rate || 0),
+        },
+      ]
+    : [];
 
   useEffect(() => {
     const focusValue = searchParams.get("focus");
@@ -607,6 +658,7 @@ export function DashboardPage() {
                         <TableHead className="text-sm font-medium text-[#6B7280]">ID Client</TableHead>
                         <TableHead className="text-sm font-medium text-[#6B7280]">Qualite</TableHead>
                         <TableHead className="text-sm font-medium text-[#6B7280]">CA</TableHead>
+                        <TableHead className="text-sm font-medium text-[#6B7280]">Flux confie</TableHead>
                         <TableHead className="text-sm font-medium text-[#6B7280]">Churn</TableHead>
                         <TableHead className="text-sm font-medium text-[#6B7280]">Secteur</TableHead>
                         <TableHead className="text-right text-sm font-medium text-[#6B7280]">
@@ -636,6 +688,9 @@ export function DashboardPage() {
                             <TableCell className="text-[#111827]">
                               {formatCurrencyDa(clientItem.chiffre_affaire, true)}
                             </TableCell>
+                            <TableCell className="text-[#111827]">
+                              {formatPercent(clientItem.flux_confie_pct || 0)}
+                            </TableCell>
                             <TableCell>
                               <Badge
                                 className={getRiskBadgeClass(clientItem.churn_alert_flag)}
@@ -662,7 +717,7 @@ export function DashboardPage() {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell className="py-14 text-center text-sm text-[#6B7280]" colSpan={6}>
+                          <TableCell className="py-14 text-center text-sm text-[#6B7280]" colSpan={7}>
                             Aucun client trouve pour cette recherche.
                           </TableCell>
                         </TableRow>
@@ -743,7 +798,7 @@ export function DashboardPage() {
                     <h3 className="mt-1 text-xl font-bold text-[#111827]">KPIs financiers</h3>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-6 xl:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-6 xl:grid-cols-5">
                     <KpiCard
                       label="Chiffre d'affaire"
                       supporting="Volume global du client"
@@ -760,10 +815,97 @@ export function DashboardPage() {
                       value={formatCurrencyDa(client.summary.flux_current_3m, true)}
                     />
                     <KpiCard
+                      label="Flux confie"
+                      supporting="Flux crediteur / chiffre d'affaire"
+                      value={formatPercent(client.summary.flux_confie_pct || 0)}
+                    />
+                    <KpiCard
                       label="Etat incidents"
                       supporting={client.summary.incident_status || "N/A"}
                       value={client.summary.churn_alert_flag ? "Alerte" : "Sain"}
                     />
+                  </div>
+                </section>
+
+                <section className="space-y-4">
+                  <div>
+                    <p className="text-sm font-medium text-[#6B7280]">Section analyse client</p>
+                    <h3 className="mt-1 text-xl font-bold text-[#111827]">Ratios et dynamique des flux</h3>
+                  </div>
+
+                  <div className="grid gap-6 xl:grid-cols-2">
+                    <Card className="rounded-xl border-slate-200 bg-white shadow-sm">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-xl font-bold text-[#111827]">
+                          <BarChart3 className="size-5 text-[#E60028]" />
+                          Flux 3M compares
+                        </CardTitle>
+                        <CardDescription className="text-sm text-[#6B7280]">
+                          Lecture directe des flux crediteurs actuels versus la periode precedente.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-72">
+                          <ResponsiveContainer height="100%" width="100%">
+                            <BarChart data={fluxComparisonData}>
+                              <CartesianGrid stroke="#E5E7EB" strokeDasharray="3 3" vertical={false} />
+                              <XAxis
+                                axisLine={false}
+                                dataKey="label"
+                                tick={{ fill: "#6B7280", fontSize: 12 }}
+                                tickLine={false}
+                              />
+                              <YAxis
+                                axisLine={false}
+                                tick={{ fill: "#6B7280", fontSize: 12 }}
+                                tickFormatter={(value) => formatCompactNumber(value)}
+                                tickLine={false}
+                              />
+                              <Tooltip formatter={(value) => formatCurrencyDa(value)} />
+                              <Bar dataKey="value" fill="#E60028" radius={[10, 10, 0, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="rounded-xl border-slate-200 bg-white shadow-sm">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-xl font-bold text-[#111827]">
+                          <TrendingUp className="size-5 text-[#E60028]" />
+                          Ratios relationnels
+                        </CardTitle>
+                        <CardDescription className="text-sm text-[#6B7280]">
+                          Intensite de la relation mesuree par le flux confie, la marge, le digital et l'utilisation du credit.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-72">
+                          <ResponsiveContainer height="100%" width="100%">
+                            <BarChart data={relationshipRatioData} layout="vertical" margin={{ left: 16 }}>
+                              <CartesianGrid stroke="#E5E7EB" strokeDasharray="3 3" horizontal={false} />
+                              <XAxis
+                                axisLine={false}
+                                tick={{ fill: "#6B7280", fontSize: 12 }}
+                                tickFormatter={(value) => `${Number(value).toFixed(0)}%`}
+                                tickLine={false}
+                                type="number"
+                              />
+                              <YAxis
+                                axisLine={false}
+                                dataKey="label"
+                                tick={{ fill: "#111827", fontSize: 12 }}
+                                tickLine={false}
+                                type="category"
+                                width={92}
+                              />
+                              <Tooltip formatter={(value) => formatPercent(value, 1)} />
+                              <Bar dataKey="value" fill="#111827" radius={[0, 10, 10, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
                 </section>
 

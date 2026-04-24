@@ -504,6 +504,7 @@ def build_manager_client_row(client_id: str, row_dict: dict[str, Any]) -> dict[s
         "sector_detail": client_summary["sector_detail"],
         "chiffre_affaire": client_summary["chiffre_affaire"],
         "pnb_net": client_summary["pnb_net"],
+        "flux_confie_pct": client_summary["flux_confie_pct"],
         "churn_alert_flag": client_summary["churn_alert_flag"],
         "incident_status": client_summary["incident_status"],
     }
@@ -908,6 +909,12 @@ def build_flux_metrics(row_dict: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def compute_ratio_percent(numerator: float, denominator: float) -> float:
+    if denominator <= 0:
+        return 0.0
+    return round((numerator / denominator) * 100, 2)
+
+
 def build_client_summary(client_id: str, row_dict: dict[str, Any]) -> dict[str, Any]:
     quality_client = safe_float(row_dict.get("Qualité Client"))
     churn_alert = bool(int(safe_float(row_dict.get("Churn_Alert_Flag"))))
@@ -915,6 +922,10 @@ def build_client_summary(client_id: str, row_dict: dict[str, Any]) -> dict[str, 
     latest_incidents = safe_float(row_dict.get("nbr_imp_total_last"))
     incident_status = "À risque" if quality_client >= 5 or risk_impayes_total > 0 or latest_incidents > 0 else "Sain"
     flux_metrics = build_flux_metrics(row_dict)
+    chiffre_affaire = safe_float(row_dict.get("chiffre d'affaire"))
+    pnb_net = safe_float(row_dict.get("PNB_NET_15m") or row_dict.get("PNB NET_sum_15m"))
+    flux_confie_pct = compute_ratio_percent(flux_metrics["flux_current_3m"], chiffre_affaire)
+    pnb_margin_pct = compute_ratio_percent(pnb_net, chiffre_affaire)
 
     return {
         "client_id": client_id,
@@ -929,13 +940,15 @@ def build_client_summary(client_id: str, row_dict: dict[str, Any]) -> dict[str, 
         "creation_date": clean_string(row_dict.get("Date de création")),
         "capital_simulated": simulate_capital(row_dict),
         "shareholders_count": int(safe_float(row_dict.get("Nbr Actionnaire"))),
-        "chiffre_affaire": safe_float(row_dict.get("chiffre d'affaire")),
-        "pnb_net": safe_float(row_dict.get("PNB_NET_15m") or row_dict.get("PNB NET_sum_15m")),
+        "chiffre_affaire": chiffre_affaire,
+        "pnb_net": pnb_net,
         "churn_alert_flag": churn_alert,
         "incident_status": incident_status,
         "risk_impayes_total": risk_impayes_total,
         "digital_score": safe_float(row_dict.get("Score_Digital_Actif")),
         "credit_utilization_rate": safe_float(row_dict.get("Taux_Utilisation_Credit")),
+        "flux_confie_pct": flux_confie_pct,
+        "pnb_margin_pct": pnb_margin_pct,
         "nb_products_held": int(safe_float(row_dict.get("Nb_Produits_Detenus"))),
         "nb_products_credit": int(safe_float(row_dict.get("Nb_Produits_Credit"))),
         "nb_products_non_credit": int(safe_float(row_dict.get("Nb_Produits_Non_Credit"))),
