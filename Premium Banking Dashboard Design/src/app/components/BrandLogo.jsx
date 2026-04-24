@@ -11,7 +11,7 @@ export function BrandLogo({
   const image = (
     <img
       alt={alt}
-      className={cn("h-10 w-auto object-contain", compact ? "max-w-12" : "max-w-full", imageClassName)}
+      className={cn("h-12 w-auto object-contain", compact ? "max-w-14" : "max-w-full", imageClassName)}
       src={synergLogo}
     />
   );

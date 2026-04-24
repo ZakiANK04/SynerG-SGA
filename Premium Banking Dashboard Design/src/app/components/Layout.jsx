@@ -86,7 +86,7 @@ export function AppLayout() {
         }`}
       >
         <header className="sticky top-0 z-30 flex h-16 items-center justify-center border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur lg:hidden">
-          <BrandLogo imageClassName="h-11 w-auto max-w-[11rem]" />
+          <BrandLogo imageClassName="h-[3.3rem] w-auto max-w-[13.2rem]" />
         </header>
 
         <main className="min-h-screen overflow-y-auto p-4 pb-24 lg:p-6 lg:pb-6">

@@ -1,6 +1,6 @@
 import jsPDF from "jspdf";
 
-import brandLogo from "../../assets/synerg-logo.svg";
+import brandLogo from "../../assets/Synerg.png";
 
 const COLORS = {
   black: "#111827",
@@ -212,6 +212,26 @@ function getProductMix(summary) {
     .join(", ");
 }
 
+function buildRecommendationNarrative(summary, recommendation) {
+  if (!recommendation) {
+    return "Aucune recommandation prioritaire n'est disponible pour produire un commentaire metier contextualise.";
+  }
+
+  const fluxTrend = getFluxTrend(summary).toLowerCase();
+  const churnSentence = summary?.churn_alert_flag
+    ? "Le client presente par ailleurs un risque de churn qui renforce la necessite d'une action commerciale rapide."
+    : "Le client evolue dans une situation relationnelle globalement stable, ce qui facilite un discours de developpement commercial.";
+  const tradeDependency = formatPercent(summary?.trade_dependency_pct || 0);
+  const fluxConfie = formatPercent(summary?.flux_confie_pct || 0);
+  const pnbMargin = formatPercent(summary?.pnb_margin_pct || 0);
+
+  return [
+    `La recommandation prioritaire ${safeText(recommendation.product)} ressort comme la plus pertinente car le client combine un PNB net de ${formatCurrencyDa(summary?.pnb_net)}, un flux confie de ${fluxConfie} et une marge PNB de ${pnbMargin}, ce qui confirme un potentiel de montee en valeur sur la relation.`,
+    `Le contexte montre egalement ${fluxTrend} ainsi qu'une dependance trade estimee a ${tradeDependency}, des signaux compatibles avec une proposition ${safeText(recommendation.family, "metier")} a effet concret et mesurable.`,
+    churnSentence,
+  ].join(" ");
+}
+
 function buildPdfPayload(client, insights) {
   const summary = client?.summary;
 
@@ -232,6 +252,7 @@ function buildPdfPayload(client, insights) {
         product: safeText(item?.product, `Recommendation ${index + 1}`),
       }))
     : [];
+  const firstRecommendation = recommendations[0] || null;
 
   return {
     clientId,
@@ -252,9 +273,14 @@ function buildPdfPayload(client, insights) {
       ["PNB net", formatCurrencyDa(summary.pnb_net)],
       ["Flux 3 Mois actuel", formatCurrencyDa(summary.flux_current_3m)],
       ["Flux 3 Mois precedent", formatCurrencyDa(summary.flux_previous_3m)],
+      ["Engagement 15 mois", formatCurrencyDa(summary.total_engagement)],
+      ["Commissions 15 mois", formatCurrencyDa(summary.commissions_sum)],
+      ["Flux export 15 mois", formatCurrencyDa(summary.export_flux_15m)],
+      ["Flux import 15 mois", formatCurrencyDa(summary.import_flux_15m)],
       ["Tendance flux", getFluxTrend(summary)],
       ["Mix produits", getProductMix(summary)],
     ],
+    recommendationNarrative: buildRecommendationNarrative(summary, firstRecommendation),
     recommendations,
     statusCards: [
       getQualityStatus(summary.quality_client),
@@ -467,6 +493,27 @@ function drawRecommendationCard(doc, recommendation, index, cursorY, marginX, co
   return nextY;
 }
 
+function drawNarrativeCard(doc, text, cursorY, marginX, contentWidth, marginY) {
+  const innerWidth = contentWidth - 12;
+  const lineHeight = 4.8;
+  const textLines = doc.splitTextToSize(safeText(text), innerWidth);
+  let nextY = ensureSpace(doc, cursorY, textLines.length * lineHeight + 16, marginY);
+  const cardHeight = textLines.length * lineHeight + 12;
+
+  doc.setFillColor(COLORS.light);
+  doc.roundedRect(marginX, nextY, contentWidth, cardHeight, 4, 4, "F");
+  doc.setDrawColor(COLORS.red);
+  doc.setLineWidth(0.25);
+  doc.roundedRect(marginX, nextY, contentWidth, cardHeight, 4, 4, "S");
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.7);
+  doc.setTextColor(COLORS.text);
+  doc.text(textLines, marginX + 6, nextY + 8);
+
+  return nextY + cardHeight + 6;
+}
+
 export async function exportClientPdf({ client, insights }) {
   const payload = buildPdfPayload(client, insights);
   const doc = new jsPDF({
@@ -598,6 +645,17 @@ export async function exportClientPdf({ client, insights }) {
 
     cursorY += rowHeight + gutter;
   }
+
+  cursorY = ensureSpace(doc, cursorY, 28, marginY);
+  cursorY = drawSectionHeader(doc, "Pourquoi la recommandation n°1", cursorY, marginX, contentWidth);
+  cursorY = drawNarrativeCard(
+    doc,
+    payload.recommendationNarrative,
+    cursorY,
+    marginX,
+    contentWidth,
+    marginY,
+  );
 
   cursorY = ensureSpace(doc, cursorY, 28, marginY);
   cursorY = drawSectionHeader(doc, "Top recommandations IA", cursorY, marginX, contentWidth);

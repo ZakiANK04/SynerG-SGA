@@ -11,6 +11,7 @@ import {
   MapPinned,
   Search,
   ShieldAlert,
+  SlidersHorizontal,
   Sparkles,
   TrendingUp,
   UserRound,
@@ -37,6 +38,7 @@ import { BrandLogo } from "../components/BrandLogo";
 import { LLMPitchStream, PitchMarkdown } from "../components/LLMPitchStream";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Checkbox } from "../components/ui/checkbox";
 import { Input } from "../components/ui/input";
 import { Switch } from "../components/ui/switch";
 import {
@@ -76,6 +78,10 @@ function formatCompactNumber(value) {
     maximumFractionDigits: 1,
     notation: "compact",
   }).format(Number(value || 0));
+}
+
+function formatYears(value) {
+  return `${Number(value || 0).toFixed(1)} an(s)`;
 }
 
 function formatDate(value) {
@@ -179,6 +185,15 @@ export function DashboardPage() {
   const [accepted, setAccepted] = useState(false);
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
   const [lastFeedbackMeta, setLastFeedbackMeta] = useState(null);
+  const [visibleClientColumns, setVisibleClientColumns] = useState([
+    "client_id",
+    "quality",
+    "revenue",
+    "pnb",
+    "flux_confie",
+    "churn",
+    "sector",
+  ]);
   const deferredSearch = useDeferredValue(portfolioSearch);
   const selectedClientId = searchParams.get("client") || "";
   const clients = portfolio?.clients || [];
@@ -232,6 +247,119 @@ export function DashboardPage() {
         },
       ]
     : [];
+  const profitabilityMixData = client
+    ? [
+        { label: "PNB net", value: Number(client.summary.pnb_net || 0) },
+        { label: "Commissions", value: Number(client.summary.commissions_sum || 0) },
+        { label: "MI", value: Number(client.summary.mi_sum || 0) },
+      ]
+    : [];
+  const tradeCashData = client
+    ? [
+        { label: "Export", value: Number(client.summary.export_flux_15m || 0) },
+        { label: "Import", value: Number(client.summary.import_flux_15m || 0) },
+        { label: "Cash", value: Number(client.summary.cash_transactions_15m || 0) },
+      ]
+    : [];
+  const clientTableColumnOptions = [
+    {
+      key: "client_id",
+      label: "ID Client",
+      render: (clientItem, key) => (
+        <TableCell className="font-semibold text-[#111827]" key={key}>
+          {clientItem.client_id}
+        </TableCell>
+      ),
+    },
+    {
+      key: "quality",
+      label: "Qualite",
+      render: (clientItem, key) => (
+        <TableCell key={key}>
+          <Badge className={getQualityBadgeClass(clientItem.quality_client)} variant="outline">
+            {Number(clientItem.quality_client || 0).toFixed(1)}
+          </Badge>
+        </TableCell>
+      ),
+    },
+    {
+      key: "revenue",
+      label: "CA",
+      render: (clientItem, key) => (
+        <TableCell className="text-[#111827]" key={key}>
+          {formatCurrencyDa(clientItem.chiffre_affaire, true)}
+        </TableCell>
+      ),
+    },
+    {
+      key: "pnb",
+      label: "PNB",
+      render: (clientItem, key) => (
+        <TableCell className="text-[#111827]" key={key}>
+          {formatCurrencyDa(clientItem.pnb_net, true)}
+        </TableCell>
+      ),
+    },
+    {
+      key: "flux_confie",
+      label: "Flux confie",
+      render: (clientItem, key) => (
+        <TableCell className="text-[#111827]" key={key}>
+          {formatPercent(clientItem.flux_confie_pct || 0)}
+        </TableCell>
+      ),
+    },
+    {
+      key: "engagement",
+      label: "Engagement",
+      render: (clientItem, key) => (
+        <TableCell className="text-[#111827]" key={key}>
+          {formatCurrencyDa(clientItem.total_engagement, true)}
+        </TableCell>
+      ),
+    },
+    {
+      key: "digital",
+      label: "Digital",
+      render: (clientItem, key) => (
+        <TableCell className="text-[#111827]" key={key}>
+          {formatPercent(clientItem.digital_score || 0)}
+        </TableCell>
+      ),
+    },
+    {
+      key: "relation_age",
+      label: "Relation",
+      render: (clientItem, key) => (
+        <TableCell className="text-[#111827]" key={key}>
+          {formatYears(clientItem.relation_age_years || 0)}
+        </TableCell>
+      ),
+    },
+    {
+      key: "churn",
+      label: "Churn",
+      render: (clientItem, key) => (
+        <TableCell key={key}>
+          <Badge className={getRiskBadgeClass(clientItem.churn_alert_flag)} variant="outline">
+            {clientItem.churn_alert_flag ? "A risque" : "Stable"}
+          </Badge>
+        </TableCell>
+      ),
+    },
+    {
+      key: "sector",
+      label: "Secteur",
+      render: (clientItem, key) => (
+        <TableCell className="text-[#6B7280]" key={key}>
+          {clientItem.sector || "N/A"}
+        </TableCell>
+      ),
+    },
+  ];
+  const selectedClientTableColumns = clientTableColumnOptions.filter((column) =>
+    visibleClientColumns.includes(column.key),
+  );
 
   useEffect(() => {
     const focusValue = searchParams.get("focus");
@@ -452,7 +580,7 @@ export function DashboardPage() {
     setIsExporting(true);
 
     try {
-      await exportClientPdf({ client, insights });
+      await exportClientPdf({ client, insights, recommendation: insights?.recommendations?.[0] });
       toast.success("PDF genere.");
     } catch (error) {
       toast.error(error.message || "La generation du PDF a echoue.");
@@ -508,7 +636,7 @@ export function DashboardPage() {
         <section className="rounded-xl bg-white p-5 shadow-sm sm:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="flex items-start gap-4">
-              <BrandLogo className="shrink-0" imageClassName="h-14 w-auto max-w-[11rem] sm:h-16 sm:max-w-[13rem]" />
+              <BrandLogo className="shrink-0" imageClassName="h-16 w-auto max-w-[13rem] sm:h-[4.8rem] sm:max-w-[15.5rem]" />
               <div>
               <p className="text-sm font-medium text-[#6B7280]">Vue gestionnaire commercial</p>
               <h1 className="mt-2 text-2xl font-bold tracking-tight text-[#111827] sm:text-3xl">
@@ -537,7 +665,7 @@ export function DashboardPage() {
                 <h2 className="mt-1 text-xl font-bold text-[#111827]">Indicateurs generaux</h2>
               </div>
 
-              <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-5">
                 <SummaryCard
                   description="Total des clients affectes au gestionnaire"
                   icon={Users}
@@ -550,6 +678,20 @@ export function DashboardPage() {
                   icon={CircleDollarSign}
                   title="CA Global"
                   value={formatCurrencyDa(summary.total_revenue, true)}
+                />
+                <SummaryCard
+                  accentClassName="text-emerald-600"
+                  description="PNB consolide du portefeuille"
+                  icon={TrendingUp}
+                  title="PNB Global"
+                  value={formatCurrencyDa(summary.total_pnb, true)}
+                />
+                <SummaryCard
+                  accentClassName="text-amber-600"
+                  description="Part moyenne des flux confies au portefeuille"
+                  icon={BarChart3}
+                  title="Flux confie moyen"
+                  value={formatPercent(summary.average_flux_confie_pct || 0)}
                 />
                 <SummaryCard
                   accentClassName="text-rose-600"
@@ -671,16 +813,49 @@ export function DashboardPage() {
                     </div>
 
                     <AccordionContent className="pt-4">
+                      <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <div className="mb-3 flex items-center gap-2">
+                          <SlidersHorizontal className="size-4 text-[#E60028]" />
+                          <p className="text-sm font-semibold text-[#111827]">Colonnes visibles</p>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                          {clientTableColumnOptions.map((column) => (
+                            <label
+                              className="flex items-center gap-3 rounded-lg bg-white px-3 py-2"
+                              key={column.key}
+                            >
+                              <Checkbox
+                                checked={visibleClientColumns.includes(column.key)}
+                                className="border-slate-300 data-[state=checked]:border-[#E60028] data-[state=checked]:bg-[#E60028] data-[state=checked]:text-white"
+                                onCheckedChange={(checked) => {
+                                  setVisibleClientColumns((current) => {
+                                    if (checked) {
+                                      return [...new Set([...current, column.key])];
+                                    }
+
+                                    if (current.length === 1) {
+                                      return current;
+                                    }
+
+                                    return current.filter((value) => value !== column.key);
+                                  });
+                                }}
+                              />
+                              <span className="text-sm font-medium text-[#111827]">{column.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
                       <div className="overflow-x-auto rounded-xl border border-slate-200">
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead className="text-sm font-medium text-[#6B7280]">ID Client</TableHead>
-                              <TableHead className="text-sm font-medium text-[#6B7280]">Qualite</TableHead>
-                              <TableHead className="text-sm font-medium text-[#6B7280]">CA</TableHead>
-                              <TableHead className="text-sm font-medium text-[#6B7280]">Flux confie</TableHead>
-                              <TableHead className="text-sm font-medium text-[#6B7280]">Churn</TableHead>
-                              <TableHead className="text-sm font-medium text-[#6B7280]">Secteur</TableHead>
+                              {selectedClientTableColumns.map((column) => (
+                                <TableHead className="text-sm font-medium text-[#6B7280]" key={column.key}>
+                                  {column.label}
+                                </TableHead>
+                              ))}
                               <TableHead className="text-right text-sm font-medium text-[#6B7280]">
                                 Action
                               </TableHead>
@@ -694,32 +869,9 @@ export function DashboardPage() {
                                   className="cursor-pointer hover:bg-slate-50"
                                   onClick={() => openClient(clientItem.client_id)}
                                 >
-                                  <TableCell className="font-semibold text-[#111827]">
-                                    {clientItem.client_id}
-                                  </TableCell>
-                                  <TableCell>
-                                    <Badge
-                                      className={getQualityBadgeClass(clientItem.quality_client)}
-                                      variant="outline"
-                                    >
-                                      {Number(clientItem.quality_client || 0).toFixed(1)}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell className="text-[#111827]">
-                                    {formatCurrencyDa(clientItem.chiffre_affaire, true)}
-                                  </TableCell>
-                                  <TableCell className="text-[#111827]">
-                                    {formatPercent(clientItem.flux_confie_pct || 0)}
-                                  </TableCell>
-                                  <TableCell>
-                                    <Badge
-                                      className={getRiskBadgeClass(clientItem.churn_alert_flag)}
-                                      variant="outline"
-                                    >
-                                      {clientItem.churn_alert_flag ? "A risque" : "Stable"}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell className="text-[#6B7280]">{clientItem.sector || "N/A"}</TableCell>
+                                  {selectedClientTableColumns.map((column) => (
+                                    column.render(clientItem, column.key)
+                                  ))}
                                   <TableCell className="text-right">
                                     <Button
                                       className="rounded-xl"
@@ -737,7 +889,10 @@ export function DashboardPage() {
                               ))
                             ) : (
                               <TableRow>
-                                <TableCell className="py-14 text-center text-sm text-[#6B7280]" colSpan={7}>
+                                <TableCell
+                                  className="py-14 text-center text-sm text-[#6B7280]"
+                                  colSpan={selectedClientTableColumns.length + 1}
+                                >
                                   Aucun client trouve pour cette recherche.
                                 </TableCell>
                               </TableRow>
@@ -920,7 +1075,7 @@ export function DashboardPage() {
                     <h3 className="mt-1 text-xl font-bold text-[#111827]">Ratios et dynamique des flux</h3>
                   </div>
 
-                  <div className="grid gap-6 xl:grid-cols-2">
+                  <div className="grid gap-6 2xl:grid-cols-3">
                     <Card className="rounded-xl border-slate-200 bg-white shadow-sm">
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-xl font-bold text-[#111827]">
@@ -993,6 +1148,40 @@ export function DashboardPage() {
                         </div>
                       </CardContent>
                     </Card>
+
+                    <Card className="rounded-xl border-slate-200 bg-white shadow-sm">
+                      <CardHeader>
+                        <CardTitle className="text-xl font-bold text-[#111827]">Mix produits</CardTitle>
+                        <CardDescription className="text-sm text-[#6B7280]">
+                          Repartition des usages produits du client.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-72">
+                          <ResponsiveContainer height="100%" width="100%">
+                            <PieChart>
+                              <Pie
+                                cx="50%"
+                                cy="50%"
+                                data={client.summary.product_distribution || []}
+                                dataKey="value"
+                                innerRadius={55}
+                                outerRadius={84}
+                                paddingAngle={3}
+                              >
+                                {(client.summary.product_distribution || []).map((entry, index) => (
+                                  <Cell
+                                    fill={entry.color || CHART_COLORS[index % CHART_COLORS.length]}
+                                    key={`${entry.name}-${index}`}
+                                  />
+                                ))}
+                              </Pie>
+                              <Tooltip formatter={(value) => `${value}%`} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
                 </section>
 
@@ -1028,6 +1217,92 @@ export function DashboardPage() {
                       supporting={client.summary.incident_status || "N/A"}
                       value={client.summary.churn_alert_flag ? "Alerte" : "Sain"}
                     />
+                  </div>
+                </section>
+
+                <section className="space-y-4">
+                  <div>
+                    <p className="text-sm font-medium text-[#6B7280]">Section metriques avancees</p>
+                    <h3 className="mt-1 text-xl font-bold text-[#111827]">Rentabilite et activite 15 mois</h3>
+                  </div>
+
+                  <div className="grid gap-6 xl:grid-cols-4">
+                    <KpiCard
+                      label="Engagement total"
+                      supporting="Encours cumules observes sur 15 mois"
+                      value={formatCurrencyDa(client.summary.total_engagement, true)}
+                    />
+                    <KpiCard
+                      label="Commissions"
+                      supporting={`Part du PNB ${formatPercent(client.summary.commissions_share_pct || 0)}`}
+                      value={formatCurrencyDa(client.summary.commissions_sum, true)}
+                    />
+                    <KpiCard
+                      label="Anciennete relation"
+                      supporting={`${client.summary.months_observed || 0} mois analyses`}
+                      value={formatYears(client.summary.relation_age_years || 0)}
+                    />
+                    <KpiCard
+                      label="Activite RH"
+                      supporting={client.summary.is_international ? "Client international" : "Client domestique"}
+                      value={`${Number(client.summary.employees_count || 0)} employes`}
+                    />
+                  </div>
+
+                  <div className="grid gap-6 2xl:grid-cols-2">
+                    <Card className="rounded-xl border-slate-200 bg-white shadow-sm">
+                      <CardHeader>
+                        <CardTitle className="text-xl font-bold text-[#111827]">Revenus bancaires</CardTitle>
+                        <CardDescription className="text-sm text-[#6B7280]">
+                          PNB net, commissions et marge d'intermediation sur 15 mois.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-72">
+                          <ResponsiveContainer height="100%" width="100%">
+                            <BarChart data={profitabilityMixData}>
+                              <CartesianGrid stroke="#E5E7EB" strokeDasharray="3 3" vertical={false} />
+                              <XAxis axisLine={false} dataKey="label" tick={{ fill: "#6B7280", fontSize: 12 }} tickLine={false} />
+                              <YAxis
+                                axisLine={false}
+                                tick={{ fill: "#6B7280", fontSize: 12 }}
+                                tickFormatter={(value) => formatCompactNumber(value)}
+                                tickLine={false}
+                              />
+                              <Tooltip formatter={(value) => formatCurrencyDa(value)} />
+                              <Bar dataKey="value" fill="#111827" radius={[10, 10, 0, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="rounded-xl border-slate-200 bg-white shadow-sm">
+                      <CardHeader>
+                        <CardTitle className="text-xl font-bold text-[#111827]">Trade et cash management</CardTitle>
+                        <CardDescription className="text-sm text-[#6B7280]">
+                          Flux export, import et transactions cash observes sur 15 mois.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-72">
+                          <ResponsiveContainer height="100%" width="100%">
+                            <BarChart data={tradeCashData}>
+                              <CartesianGrid stroke="#E5E7EB" strokeDasharray="3 3" vertical={false} />
+                              <XAxis axisLine={false} dataKey="label" tick={{ fill: "#6B7280", fontSize: 12 }} tickLine={false} />
+                              <YAxis
+                                axisLine={false}
+                                tick={{ fill: "#6B7280", fontSize: 12 }}
+                                tickFormatter={(value) => formatCompactNumber(value)}
+                                tickLine={false}
+                              />
+                              <Tooltip formatter={(value) => formatCurrencyDa(value)} />
+                              <Bar dataKey="value" fill="#E60028" radius={[10, 10, 0, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
                 </section>
 
@@ -1225,58 +1500,43 @@ export function DashboardPage() {
 
                   <section className="space-y-4">
                     <div>
-                      <p className="text-sm font-medium text-[#6B7280]">Section usages produits</p>
-                      <h3 className="mt-1 text-xl font-bold text-[#111827]">Usages et equipement</h3>
+                      <p className="text-sm font-medium text-[#6B7280]">Section lecture metrique</p>
+                      <h3 className="mt-1 text-xl font-bold text-[#111827]">Signaux complementaires</h3>
                     </div>
 
                     <Card className="rounded-xl border-slate-200 bg-white shadow-sm">
                       <CardHeader>
-                        <CardTitle className="text-xl font-bold text-[#111827]">Mix produits</CardTitle>
+                        <CardTitle className="text-xl font-bold text-[#111827]">Lecture relationnelle</CardTitle>
                         <CardDescription className="text-sm text-[#6B7280]">
-                          Repartition des usages produits du client.
+                          Indicateurs complementaires proches de la fiche PDF pour enrichir la lecture conseiller.
                         </CardDescription>
                       </CardHeader>
-                      <CardContent>
-                        <div className="h-64">
-                          <ResponsiveContainer height="100%" width="100%">
-                            <PieChart>
-                              <Pie
-                                cx="50%"
-                                cy="50%"
-                                data={client.summary.product_distribution || []}
-                                dataKey="value"
-                                innerRadius={55}
-                                outerRadius={84}
-                                paddingAngle={3}
-                              >
-                                {(client.summary.product_distribution || []).map((entry, index) => (
-                                  <Cell
-                                    fill={entry.color || CHART_COLORS[index % CHART_COLORS.length]}
-                                    key={`${entry.name}-${index}`}
-                                  />
-                                ))}
-                              </Pie>
-                              <Tooltip formatter={(value) => `${value}%`} />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        </div>
-
-                        <div className="mt-4 space-y-3">
-                          {(client.summary.product_distribution || []).map((item, index) => (
-                            <div className="flex items-center justify-between gap-3" key={item.name}>
-                              <div className="flex items-center gap-3">
-                                <span
-                                  className="h-3 w-3 rounded-full"
-                                  style={{
-                                    backgroundColor:
-                                      item.color || CHART_COLORS[index % CHART_COLORS.length],
-                                  }}
-                                />
-                                <span className="text-sm font-medium text-[#111827]">{item.name}</span>
-                              </div>
-                              <span className="text-sm text-[#6B7280]">{formatPercent(item.value)}</span>
-                            </div>
-                          ))}
+                      <CardContent className="space-y-4">
+                        <div className="grid gap-3">
+                          <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
+                            <span className="text-sm font-medium text-[#6B7280]">Dependance trade</span>
+                            <span className="text-sm font-semibold text-[#111827]">
+                              {formatPercent(client.summary.trade_dependency_pct || 0)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
+                            <span className="text-sm font-medium text-[#6B7280]">Couverture engagement</span>
+                            <span className="text-sm font-semibold text-[#111827]">
+                              {formatPercent(client.summary.engagement_coverage_pct || 0)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
+                            <span className="text-sm font-medium text-[#6B7280]">Mois actifs flux</span>
+                            <span className="text-sm font-semibold text-[#111827]">
+                              {client.summary.months_active_flux || 0}/{client.summary.months_observed || 0}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
+                            <span className="text-sm font-medium text-[#6B7280]">Mois actifs PNB</span>
+                            <span className="text-sm font-semibold text-[#111827]">
+                              {client.summary.months_active_pnb || 0}/{client.summary.months_observed || 0}
+                            </span>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>

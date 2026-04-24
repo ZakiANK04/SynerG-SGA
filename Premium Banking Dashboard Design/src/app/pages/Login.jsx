@@ -128,7 +128,7 @@ export function LoginPage() {
         <section className="flex items-center justify-center px-6 py-10 sm:px-10 lg:px-16">
           <div className="w-full max-w-md">
             <div className="mb-6 flex items-center gap-4">
-              <BrandLogo imageClassName="h-14 w-auto" />
+              <BrandLogo imageClassName="h-[4.2rem] w-auto" />
               <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                 <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#111827]">
                   Espace securise

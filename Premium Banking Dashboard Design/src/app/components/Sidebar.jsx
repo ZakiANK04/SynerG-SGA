@@ -75,7 +75,7 @@ export function Sidebar({
         <div className={cn("flex items-center overflow-hidden", collapsed && "justify-center")}>
           <BrandLogo
             compact={collapsed}
-            imageClassName={collapsed ? "h-10 w-auto max-w-10" : "h-20 w-auto max-w-[11rem]"}
+            imageClassName={collapsed ? "h-12 w-auto max-w-12" : "h-24 w-auto max-w-[13.2rem]"}
             withPlate={!collapsed}
           />
         </div>

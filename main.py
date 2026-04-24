@@ -527,7 +527,11 @@ def build_manager_client_row(client_id: str, row_dict: dict[str, Any]) -> dict[s
         "sector_detail": client_summary["sector_detail"],
         "chiffre_affaire": client_summary["chiffre_affaire"],
         "pnb_net": client_summary["pnb_net"],
+        "commissions_sum": client_summary["commissions_sum"],
+        "total_engagement": client_summary["total_engagement"],
         "flux_confie_pct": client_summary["flux_confie_pct"],
+        "relation_age_years": client_summary["relation_age_years"],
+        "digital_score": client_summary["digital_score"],
         "churn_alert_flag": client_summary["churn_alert_flag"],
         "incident_status": client_summary["incident_status"],
     }
@@ -612,6 +616,8 @@ def build_manager_portfolio_summary(dataframe: pd.DataFrame) -> dict[str, Any]:
             "churn_alerts": 0,
             "total_revenue": 0.0,
             "average_quality": 0.0,
+            "total_pnb": 0.0,
+            "average_flux_confie_pct": 0.0,
         }
 
     churn_alerts = int(
@@ -619,12 +625,24 @@ def build_manager_portfolio_summary(dataframe: pd.DataFrame) -> dict[str, Any]:
     )
     total_revenue = float(dataframe["chiffre d'affaire"].fillna(0).map(safe_float).sum())
     average_quality = float(dataframe["Qualité Client"].fillna(0).map(safe_float).mean())
+    total_pnb = float(dataframe["PNB_NET_15m"].fillna(0).map(safe_float).sum())
+    average_flux_confie_pct = float(
+        dataframe.apply(
+            lambda row: compute_ratio_percent(
+                safe_float(row.get("Flux_Crediteurs_Current_3M")),
+                safe_float(row.get("chiffre d'affaire")),
+            ),
+            axis=1,
+        ).mean()
+    )
 
     return {
         "total_clients": int(dataframe.shape[0]),
         "churn_alerts": churn_alerts,
         "total_revenue": round(total_revenue, 2),
         "average_quality": round(average_quality, 2),
+        "total_pnb": round(total_pnb, 2),
+        "average_flux_confie_pct": round(average_flux_confie_pct, 2),
     }
 
 
@@ -1013,8 +1031,21 @@ def build_client_summary(client_id: str, row_dict: dict[str, Any]) -> dict[str, 
     flux_metrics = build_flux_metrics(row_dict)
     chiffre_affaire = safe_float(row_dict.get("chiffre d'affaire"))
     pnb_net = safe_float(row_dict.get("PNB_NET_15m") or row_dict.get("PNB NET_sum_15m"))
+    commissions_sum = safe_float(row_dict.get("Commissions_sum_15m"))
+    mi_sum = safe_float(row_dict.get("MI_sum_15m"))
+    total_engagement = safe_float(row_dict.get("total engagement_sum_15m"))
+    export_flux_15m = safe_float(row_dict.get("Flux Export_sum_15m"))
+    import_flux_15m = safe_float(row_dict.get("Flux IMPORT_sum_15m"))
+    cash_transactions_15m = safe_float(row_dict.get("Cash_Transactions_15m"))
+    months_observed = int(safe_float(row_dict.get("Months_Observed")))
+    months_active_flux = int(safe_float(row_dict.get("Months_Active_Flux")))
+    months_active_pnb = int(safe_float(row_dict.get("Months_Active_PNB")))
+    relation_age_years = round(safe_float(row_dict.get("Ancienneté de la relation")) / 12, 1)
     flux_confie_pct = compute_ratio_percent(flux_metrics["flux_current_3m"], chiffre_affaire)
     pnb_margin_pct = compute_ratio_percent(pnb_net, chiffre_affaire)
+    trade_dependency_pct = compute_ratio_percent(export_flux_15m + import_flux_15m, chiffre_affaire)
+    commissions_share_pct = compute_ratio_percent(commissions_sum, pnb_net)
+    engagement_coverage_pct = compute_ratio_percent(total_engagement, chiffre_affaire)
 
     return {
         "client_id": client_id,
@@ -1029,15 +1060,30 @@ def build_client_summary(client_id: str, row_dict: dict[str, Any]) -> dict[str, 
         "creation_date": clean_string(row_dict.get("Date de création")),
         "capital_simulated": simulate_capital(row_dict),
         "shareholders_count": int(safe_float(row_dict.get("Nbr Actionnaire"))),
+        "employees_count": int(safe_float(row_dict.get("Nbr d'employés"))),
+        "relation_age_years": relation_age_years,
         "chiffre_affaire": chiffre_affaire,
         "pnb_net": pnb_net,
+        "commissions_sum": commissions_sum,
+        "mi_sum": mi_sum,
+        "total_engagement": total_engagement,
+        "export_flux_15m": export_flux_15m,
+        "import_flux_15m": import_flux_15m,
+        "cash_transactions_15m": cash_transactions_15m,
         "churn_alert_flag": churn_alert,
         "incident_status": incident_status,
         "risk_impayes_total": risk_impayes_total,
         "digital_score": safe_float(row_dict.get("Score_Digital_Actif")),
         "credit_utilization_rate": safe_float(row_dict.get("Taux_Utilisation_Credit")),
+        "months_observed": months_observed,
+        "months_active_flux": months_active_flux,
+        "months_active_pnb": months_active_pnb,
         "flux_confie_pct": flux_confie_pct,
         "pnb_margin_pct": pnb_margin_pct,
+        "trade_dependency_pct": trade_dependency_pct,
+        "commissions_share_pct": commissions_share_pct,
+        "engagement_coverage_pct": engagement_coverage_pct,
+        "is_international": bool(int(safe_float(row_dict.get("Is_International")))),
         "nb_products_held": int(safe_float(row_dict.get("Nb_Produits_Detenus"))),
         "nb_products_credit": int(safe_float(row_dict.get("Nb_Produits_Credit"))),
         "nb_products_non_credit": int(safe_float(row_dict.get("Nb_Produits_Non_Credit"))),
