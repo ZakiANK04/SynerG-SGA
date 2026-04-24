@@ -1,0 +1,11 @@
+{
+  "name": "synerg-sga-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "postinstall": "npm --prefix \"Premium Banking Dashboard Design\" install",
+    "build": "npm --prefix \"Premium Banking Dashboard Design\" run build",
+    "build:frontend": "npm --prefix \"Premium Banking Dashboard Design\" run build",
+    "dev:frontend": "npm --prefix \"Premium Banking Dashboard Design\" run dev"
+  }
+}
