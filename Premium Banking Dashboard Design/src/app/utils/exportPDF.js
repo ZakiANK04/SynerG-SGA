@@ -250,8 +250,8 @@ function buildPdfPayload(client, insights) {
     financeCards: [
       ["Chiffre d'affaire", formatCurrencyDa(summary.chiffre_affaire)],
       ["PNB net", formatCurrencyDa(summary.pnb_net)],
-      ["Flux 3M actuel", formatCurrencyDa(summary.flux_current_3m)],
-      ["Flux 3M precedent", formatCurrencyDa(summary.flux_previous_3m)],
+      ["Flux 3 Mois actuel", formatCurrencyDa(summary.flux_current_3m)],
+      ["Flux 3 Mois precedent", formatCurrencyDa(summary.flux_previous_3m)],
       ["Tendance flux", getFluxTrend(summary)],
       ["Mix produits", getProductMix(summary)],
     ],

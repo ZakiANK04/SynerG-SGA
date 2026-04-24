@@ -1035,6 +1035,8 @@ export function DashboardPage() {
                             clientSummary={client?.summary}
                             disabled={!selectedRecommendation}
                             ficheVisite={insights?.fiche_visite}
+                            managerEmail={session?.email}
+                            managerName={session?.managerName}
                             onGenerated={(generatedPitch) => {
                               setPitchContent(generatedPitch || selectedRecommendation?.argumentaire || "");
                               setPitchSource("prototype-local");

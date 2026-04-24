@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { LoaderCircle, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 
+import { API_BASE_URL } from "../lib/api";
 import { Button } from "./ui/button";
 
 function parseMarkdown(content) {
@@ -178,6 +179,8 @@ export function LLMPitchStream({
   clientSummary,
   disabled = false,
   ficheVisite,
+  managerEmail,
+  managerName,
   onGenerated,
   persona,
   productName,
@@ -187,6 +190,7 @@ export function LLMPitchStream({
   const [isOpen, setIsOpen] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [pitchText, setPitchText] = useState("");
+  const [modelName, setModelName] = useState("prototype-local");
 
   const generatedPitch = useMemo(
     () =>
@@ -213,7 +217,7 @@ export function LLMPitchStream({
     setIsStreaming(false);
   }
 
-  function startStreaming() {
+  async function startStreaming() {
     if (!clientId || !productName) {
       toast.error("Selectionnez un client et un produit avant de lancer le pitch.");
       return;
@@ -223,21 +227,91 @@ export function LLMPitchStream({
     setIsOpen(true);
     setIsStreaming(true);
     setPitchText("");
+    setModelName("prototype-local");
 
-    let index = 0;
-    intervalRef.current = window.setInterval(() => {
-      index += 6;
-      const nextValue = generatedPitch.slice(0, index);
-      setPitchText(nextValue);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/generate-pitch`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          client_id: clientId,
+          manager_email: managerEmail,
+          manager_name: managerName,
+          product_name: productName,
+        }),
+      });
 
-      if (index >= generatedPitch.length) {
-        window.clearInterval(intervalRef.current);
-        intervalRef.current = null;
-        setIsStreaming(false);
-        onGenerated?.(generatedPitch);
-        toast.success("Pitch IA genere en local.");
+      if (!response.ok) {
+        const errorPayload = response.headers.get("content-type")?.includes("application/json")
+          ? await response.json()
+          : await response.text();
+        const message =
+          (typeof errorPayload === "object" && errorPayload?.detail) ||
+          (typeof errorPayload === "string" && errorPayload) ||
+          "Le flux de pitch n'a pas pu demarrer.";
+        throw new Error(message);
       }
-    }, 18);
+
+      const resolvedModelName = response.headers.get("X-LLM-Model") || "fallback-rules";
+      setModelName(resolvedModelName);
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("Le navigateur n'a pas recu de flux lisible.");
+      }
+
+      const decoder = new TextDecoder("utf-8");
+      let aggregatedText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+
+        const chunk = decoder.decode(value, { stream: true });
+        if (!chunk) {
+          continue;
+        }
+
+        aggregatedText += chunk;
+        setPitchText((current) => current + chunk);
+      }
+
+      const finalPitch = aggregatedText.trim();
+      if (!finalPitch) {
+        throw new Error("Aucun contenu n'a ete retourne par le backend.");
+      }
+
+      onGenerated?.(finalPitch);
+      toast.success(
+        resolvedModelName === "fallback-rules"
+          ? "Pitch IA genere via fallback backend."
+          : "Pitch IA genere en local.",
+      );
+    } catch (error) {
+      const fallbackPitch = generatedPitch;
+      let index = 0;
+      setModelName("prototype-local");
+      intervalRef.current = window.setInterval(() => {
+        index += 6;
+        const nextValue = fallbackPitch.slice(0, index);
+        setPitchText(nextValue);
+
+        if (index >= fallbackPitch.length) {
+          window.clearInterval(intervalRef.current);
+          intervalRef.current = null;
+          setIsStreaming(false);
+          onGenerated?.(fallbackPitch);
+          toast.success("Pitch IA genere via fallback frontend.");
+        }
+      }, 18);
+      return;
+    }
+
+    setIsStreaming(false);
   }
 
   return (
@@ -258,7 +332,7 @@ export function LLMPitchStream({
                   </p>
                   <h2 className="mt-2 text-2xl font-bold text-white">Argumentaire IA local</h2>
                   <p className="mt-2 text-sm leading-6 text-slate-300">
-                    Produit {productName} · Modele prototype local
+                    Produit {productName} · Modele {modelName}
                   </p>
                 </div>
 
@@ -294,7 +368,7 @@ export function LLMPitchStream({
 
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 px-6 py-4 sm:px-8">
               <p className="text-xs uppercase tracking-[0.26em] text-slate-500">
-                100% local · regles metier · prototype
+                stream backend · fallback backend · fallback frontend
               </p>
 
               <div className="flex flex-wrap gap-3">
